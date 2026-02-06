@@ -37,6 +37,7 @@ interface ResultsTableProps {
   totalClubs?: number;
   highConfidenceClubs?: number;
   avgDriveTime?: number;
+  avgDistance?: number;
   youthFocusedPercent?: number;
   mixedRecreationalPercent?: number;
 }
@@ -58,6 +59,7 @@ export default function ResultsTable(props: ResultsTableProps) {
     totalClubs = 0,
     highConfidenceClubs = 0,
     avgDriveTime = 0,
+    avgDistance = 0,
     youthFocusedPercent = 0,
     mixedRecreationalPercent = 0,
   } = props || {};
@@ -167,7 +169,7 @@ export default function ResultsTable(props: ResultsTableProps) {
     <div className="flex flex-col h-full bg-transparent">
       {/* Header with Export - luxury styling */}
       <div className="px-5 py-3.5 border-b border-[#334155]/30 flex-shrink-0">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-xs font-light text-label text-tertiary">RANKED RESULTS</h2>
           <button
             onClick={onExport}
@@ -175,6 +177,26 @@ export default function ResultsTable(props: ResultsTableProps) {
           >
             EXPORT
           </button>
+        </div>
+        
+        {/* Mobile Stats - shown only on mobile, hidden on desktop */}
+        <div className="md:hidden grid grid-cols-2 gap-2 mt-2">
+          <div className="card-luxury rounded-md px-3 py-2">
+            <div className="text-lg font-light text-numeric text-primary">{totalClubs}</div>
+            <div className="text-[9px] text-label text-tertiary mt-0.5">TOTAL</div>
+          </div>
+          <div className="card-luxury rounded-md px-3 py-2">
+            <div className="text-lg font-light text-numeric accent-emerald">{highConfidenceClubs}</div>
+            <div className="text-[9px] text-label text-tertiary mt-0.5">CLUBS</div>
+          </div>
+          <div className="card-luxury rounded-md px-3 py-2">
+            <div className="text-lg font-light text-numeric accent-gold">{avgDriveTime || '—'}</div>
+            <div className="text-[9px] text-label text-tertiary mt-0.5">AVG TIME</div>
+          </div>
+          <div className="card-luxury rounded-md px-3 py-2">
+            <div className="text-lg font-light text-numeric text-primary">{avgDistance ? avgDistance.toFixed(1) : '—'}</div>
+            <div className="text-[9px] text-label text-tertiary mt-0.5">AVG DIST</div>
+          </div>
         </div>
       </div>
       

@@ -248,8 +248,8 @@ export default function Home() {
       {/* USAGE DISPLAY — luxury overlay */}
       <UsageDisplay />
 
-      {/* LEFT STATS CARDS — luxury overlay, floating */}
-      <div className="absolute left-5 top-32 z-20 space-y-3 pointer-events-none">
+      {/* LEFT STATS CARDS — luxury overlay, floating (hidden on mobile) */}
+      <div className="hidden md:block absolute left-5 top-44 z-20 space-y-3 pointer-events-none">
         <div className="pointer-events-auto">
           <div className="card-luxury rounded-lg px-5 py-4">
             <div className="text-2xl font-light text-numeric text-primary">{totalClubs}</div>
@@ -276,8 +276,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* RIGHT RESULTS PANEL — luxury overlay, fixed width */}
-      <div className="absolute right-5 top-32 bottom-5 z-20 w-[420px] pointer-events-none">
+      {/* RIGHT RESULTS PANEL — luxury overlay, responsive width */}
+      <div className="absolute right-0 md:right-5 top-44 bottom-5 z-20 w-full md:w-[420px] px-2 md:px-0 pointer-events-none">
         <div className="h-full pointer-events-auto flex flex-col bg-luxury-card backdrop-blur-md border border-[#334155]/30 rounded-lg overflow-hidden">
           {/* ALWAYS MOUNTED — never conditionally rendered */}
           <ResultsTable
@@ -293,6 +293,7 @@ export default function Home() {
             totalClubs={totalClubs}
             highConfidenceClubs={highConfidenceClubs}
             avgDriveTime={avgDriveTime}
+            avgDistance={avgDistance}
             youthFocusedPercent={youthFocusedPercent}
             mixedRecreationalPercent={mixedRecreationalPercent}
           />
