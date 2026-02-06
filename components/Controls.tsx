@@ -203,18 +203,18 @@ export default function Controls(props: ControlsProps) {
                 onClick={() => setShowSportsDropdown(false)}
               />
               <div className="absolute z-20 w-full mt-1.5 bg-luxury-card border border-[#334155]/40 rounded-md shadow-2xl max-h-48 overflow-y-auto backdrop-blur-md">
-                <div className="p-1.5 space-y-0.5">
+                <div className="p-2 space-y-1">
                   {SPORTS.map((sport) => (
                     <label
                       key={sport.id}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-[#1f2937]/50 cursor-pointer rounded"
+                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#1e293b]/50 cursor-pointer rounded-md transition-luxury"
                     >
                       <input
                         type="checkbox"
                         checked={selectedSports.includes(sport.id)}
                         onChange={() => toggleSport(sport.id)}
                         disabled={isLoading}
-                        className="w-3.5 h-3.5 accent-[#f59e0b] border-[#374151] rounded bg-[#0e1420] focus:ring-[#f59e0b]/30"
+                        className="w-4 h-4 accent-[#fbbf24] border-[#334155] rounded bg-[#0f172a]/50 focus:ring-[#fbbf24]/30 transition-luxury"
                       />
                       <span className="text-sm text-secondary font-light">{sport.label}</span>
                     </label>
