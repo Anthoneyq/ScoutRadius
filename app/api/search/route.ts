@@ -39,12 +39,16 @@ const SPORT_KEYWORDS: Record<string, string[]> = {
 };
 
 // Place types to include (excludes restaurants, bars, retail, etc.)
+// Note: If too restrictive, try removing some types or making this optional
 const INCLUDED_PLACE_TYPES = [
   'sports_club',
   'school',
   'gym',
   'recreation_center',
 ];
+
+// Fallback: Try without type restrictions if initial search fails
+const FALLBACK_INCLUDED_TYPES: string[] = []; // Empty = no type restriction
 
 // Keywords that indicate non-club venues (to exclude)
 const EXCLUDED_KEYWORDS = [
@@ -148,7 +152,7 @@ export async function POST(request: NextRequest) {
       // Search with each keyword
       for (const keyword of keywords) {
         try {
-          console.log(`[Search API] Searching for "${keyword}" (sport: ${sport})`);
+          console.log(`[Search API] Searching for "${keyword}" (sport: ${sport}) with types: ${INCLUDED_PLACE_TYPES.join(', ')}`);
           const results = await searchPlaces(
             keyword,
             { lat: origin.lat, lng: origin.lng },
@@ -293,8 +297,57 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // If no places found at all, provide helpful error message
-    if (uniquePlaces.length === 0 && uniqueRawPlaces.length === 0) {
+    // If no places found at all, try fallback search without type restrictions
+    if (uniquePlaces.length === 0 && uniqueRawPlaces.length === 0 && totalResultsFound === 0) {
+      console.warn(`[Search API] No places found with type restrictions. Trying fallback search without type restrictions...`);
+      
+      // Retry search without type restrictions for first sport only (to avoid too many API calls)
+      const firstSport = sports[0];
+      const keywords = SPORT_KEYWORDS[firstSport.toLowerCase()] || [`${firstSport} club`];
+      const firstKeyword = keywords[0];
+      
+      try {
+        const fallbackResults = await searchPlaces(
+          firstKeyword,
+          { lat: origin.lat, lng: origin.lng },
+          radiusMeters,
+          apiKey,
+          undefined // No type restrictions
+        );
+        
+        console.log(`[Search API] Fallback search (no type restrictions): ${fallbackResults.length} results`);
+        
+        if (fallbackResults.length > 0) {
+          console.warn(`[Search API] Type restrictions were too strict. Consider relaxing INCLUDED_PLACE_TYPES.`);
+          // Process fallback results
+          for (const googlePlace of fallbackResults.slice(0, 10)) { // Limit to first 10
+            try {
+              const place = convertGooglePlace(googlePlace, firstSport);
+              const clubScore = getClubConfidence(place);
+              place.clubScore = clubScore;
+              place.isClub = clubScore >= 3;
+              const ageGroups = getAgeGroupScores(place);
+              place.ageGroups = ageGroups;
+              place.primaryAgeGroup = getPrimaryAgeGroup(ageGroups);
+              
+              // Still apply exclusion filter
+              const placeNameLower = place.name.toLowerCase();
+              const isExcluded = EXCLUDED_KEYWORDS.some(keyword => 
+                placeNameLower.includes(keyword)
+              );
+              
+              if (!isExcluded) {
+                rawPlacesBeforeFiltering.push(place);
+              }
+            } catch (err) {
+              console.error(`Error processing fallback place:`, err);
+            }
+          }
+        }
+      } catch (fallbackError) {
+        console.error(`[Search API] Fallback search also failed:`, fallbackError);
+      }
+      
       console.warn(`[Search API] No places found for search: ${sports.join(', ')} near [${origin.lat}, ${origin.lng}]`);
       console.warn(`[Search API] Debug info: totalResultsFound=${totalResultsFound}, radiusMeters=${radiusMeters}, keywords used=${sports.flatMap(s => SPORT_KEYWORDS[s.toLowerCase()] || [`${s} club`]).join(', ')}`);
     }
