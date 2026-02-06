@@ -60,30 +60,28 @@ export default function MapView(props: MapViewProps) {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11', // Dark, desaturated base map
+      style: 'mapbox://styles/mapbox/dark-v11', // Dark base - luxury foundation
       center: [-122.4194, 37.7749], // Default center, will update via flyTo
       zoom: 10,
     });
     
-    // Further dim the base map for intelligence-grade feel
+    // Luxury map styling - barely-there grid texture, technical precision feel
     map.current.on('style.load', () => {
       if (map.current) {
         try {
-          // Reduce saturation and contrast of base map layers
-          // Check if layers exist before setting properties
+          // Deep slate background - sophisticated, not pure black
           if (map.current.getLayer('water')) {
-            map.current.setPaintProperty('water', 'fill-color', '#1a1f2e');
+            map.current.setPaintProperty('water', 'fill-color', '#0f172a');
           }
-          // Try common road layer names - different styles use different names
+          // Minimal road visibility - restraint is luxury
           const roadLayers = ['road-street', 'road-street-low', 'road-primary-secondary', 'road'];
           for (const layerName of roadLayers) {
             if (map.current.getLayer(layerName)) {
-              map.current.setPaintProperty(layerName, 'line-opacity', 0.3);
-              break; // Only set the first one that exists
+              map.current.setPaintProperty(layerName, 'line-opacity', 0.2);
+              break;
             }
           }
         } catch (error) {
-          // Silently ignore if layers don't exist - different map styles have different layers
           console.debug('Map layer styling skipped:', error);
         }
       }
@@ -129,10 +127,11 @@ export default function MapView(props: MapViewProps) {
     el.style.width = '16px';
     el.style.height = '16px';
     el.style.borderRadius = '50%';
-    el.style.backgroundColor = '#f59e0b'; // Gold/amber for origin
-    el.style.border = '2px solid rgba(255,255,255,0.9)';
-    el.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.25), 0 2px 6px rgba(0,0,0,0.5)';
+    el.style.backgroundColor = '#fbbf24'; // Warm gold (amber 400) - luxury signal
+    el.style.border = '2px solid rgba(255,255,255,0.95)';
+    el.style.boxShadow = '0 0 0 3px rgba(251, 191, 36, 0.3), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.2)';
     el.style.cursor = 'pointer';
+    el.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
 
     originMarkerRef.current = new mapboxgl.Marker(el)
       .setLngLat([origin.lng, origin.lat])
@@ -158,8 +157,8 @@ export default function MapView(props: MapViewProps) {
         type: 'fill',
         source: 'isochrone',
         paint: {
-          'fill-color': '#f59e0b', // Gold/amber for drive-time polygon
-          'fill-opacity': 0.12, // Subtle, premium feel
+          'fill-color': '#fbbf24', // Warm gold (amber 400) - luxury signal
+          'fill-opacity': 0.15, // Subtle ambient glow
         },
       });
 
@@ -168,22 +167,22 @@ export default function MapView(props: MapViewProps) {
         type: 'line',
         source: 'isochrone',
         paint: {
-          'line-color': '#f59e0b', // Gold/amber border
-          'line-width': 2.5,
-          'line-opacity': 0.7,
+          'line-color': '#fbbf24', // Warm gold border
+          'line-width': 2,
+          'line-opacity': 0.8,
         },
       });
       
-      // Add subtle glow effect for premium feel
+      // Luxury glow effect - dramatic shadows
       map.current.addLayer({
         id: 'isochrone-glow',
         type: 'line',
         source: 'isochrone',
         paint: {
-          'line-color': '#f59e0b',
-          'line-width': 6,
-          'line-opacity': 0.15,
-          'line-blur': 3,
+          'line-color': '#fbbf24',
+          'line-width': 8,
+          'line-opacity': 0.2,
+          'line-blur': 4,
         },
       }, 'isochrone-outline');
     }
@@ -219,14 +218,18 @@ export default function MapView(props: MapViewProps) {
           let markerSize: number;
           let markerOpacity = '1';
           
-          if (clubScore >= 4) {
-            markerColor = '#14b8a6'; // Muted teal
+          // Luxury confidence tier colors
+          if (clubScore >= 80) {
+            markerColor = '#fbbf24'; // Gold - Elite
+            markerSize = isSelected ? 20 : 14;
+          } else if (clubScore >= 60) {
+            markerColor = '#10b981'; // Emerald - Premium
             markerSize = isSelected ? 18 : 12;
-          } else if (clubScore >= 2) {
-            markerColor = '#64748b'; // Slate
+          } else if (clubScore >= 40) {
+            markerColor = '#64748b'; // Slate - Standard
             markerSize = isSelected ? 16 : 10;
           } else {
-            markerColor = '#475569'; // Darker slate
+            markerColor = '#475569'; // Subdued slate - Basic
             markerSize = isSelected ? 14 : 8;
             markerOpacity = '0.6';
           }
@@ -236,10 +239,11 @@ export default function MapView(props: MapViewProps) {
           el.style.backgroundColor = markerColor;
           el.style.opacity = markerOpacity;
           el.style.zIndex = isSelected ? '1000' : '1';
-          el.style.border = isSelected ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)';
+          el.style.border = isSelected ? '2px solid #fbbf24' : '1px solid rgba(255,255,255,0.15)';
           el.style.boxShadow = isSelected 
-            ? '0 0 0 3px rgba(245, 158, 11, 0.2), 0 2px 8px rgba(0,0,0,0.5)' 
-            : '0 1px 3px rgba(0,0,0,0.4)';
+            ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
+            : '0 2px 6px rgba(0,0,0,0.5)';
+          el.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
         }
       } else {
         // Create new marker - flat, minimal circles (Pergamum-style)
@@ -248,16 +252,20 @@ export default function MapView(props: MapViewProps) {
         let markerSize: number;
         let markerOpacity = '1';
         
-        if (clubScore >= 4) {
-          markerColor = '#14b8a6'; // Muted teal - high confidence (primary)
+        // Luxury confidence tier colors
+        if (clubScore >= 80) {
+          markerColor = '#fbbf24'; // Gold - Elite
+          markerSize = isSelected ? 20 : 14;
+        } else if (clubScore >= 60) {
+          markerColor = '#10b981'; // Emerald - Premium
           markerSize = isSelected ? 18 : 12;
-        } else if (clubScore >= 2) {
-          markerColor = '#64748b'; // Slate - mixed (secondary)
+        } else if (clubScore >= 40) {
+          markerColor = '#64748b'; // Slate - Standard
           markerSize = isSelected ? 16 : 10;
         } else {
-          markerColor = '#475569'; // Darker slate - uncertain/recreational
+          markerColor = '#475569'; // Subdued slate - Basic
           markerSize = isSelected ? 14 : 8;
-          markerOpacity = '0.6'; // Slight opacity for secondary markers
+          markerOpacity = '0.6';
         }
         
         const el = document.createElement('div');
@@ -267,12 +275,12 @@ export default function MapView(props: MapViewProps) {
         el.style.borderRadius = '50%';
         el.style.backgroundColor = markerColor;
         el.style.opacity = markerOpacity;
-        el.style.border = isSelected ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)';
+        el.style.border = isSelected ? '2px solid #fbbf24' : '1px solid rgba(255,255,255,0.15)';
         el.style.boxShadow = isSelected 
-          ? '0 0 0 3px rgba(245, 158, 11, 0.2), 0 2px 8px rgba(0,0,0,0.5)' 
-          : '0 1px 3px rgba(0,0,0,0.4)';
+          ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
+          : '0 2px 6px rgba(0,0,0,0.5)';
+        el.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
         el.style.cursor = 'pointer';
-        el.style.transition = 'all 0.2s ease-out';
 
         const marker = new mapboxgl.Marker(el)
           .setLngLat([place.location.lng, place.location.lat])
@@ -282,14 +290,16 @@ export default function MapView(props: MapViewProps) {
           onPlaceClickRef.current(place.place_id);
         });
         
-        // Hover behavior - subtle glow
+        // Hover behavior - luxury amber glow
         el.addEventListener('mouseenter', () => {
-          el.style.boxShadow = '0 0 0 2px rgba(245, 158, 11, 0.3), 0 2px 8px rgba(0,0,0,0.5)';
+          el.style.boxShadow = '0 0 0 2px rgba(251, 191, 36, 0.35), 0 4px 16px rgba(0,0,0,0.6), 0 0 32px rgba(251, 191, 36, 0.2)';
+          el.style.transform = 'scale(1.1)';
         });
         el.addEventListener('mouseleave', () => {
           el.style.boxShadow = isSelected 
-            ? '0 0 0 3px rgba(245, 158, 11, 0.2), 0 2px 8px rgba(0,0,0,0.5)' 
-            : '0 1px 3px rgba(0,0,0,0.4)';
+            ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
+            : '0 2px 6px rgba(0,0,0,0.5)';
+          el.style.transform = 'scale(1)';
         });
 
         markersRef.current.set(place.place_id, marker);
@@ -297,36 +307,38 @@ export default function MapView(props: MapViewProps) {
     });
   }, [places, selectedPlaceId, isLoaded]);
 
-  return (
-    <div className="w-full h-full relative bg-[#0e1420]">
-      <div ref={mapContainer} className="w-full h-full" style={{ opacity: 0.95 }} />
+    return (
+    <div className="w-full h-full relative bg-luxury-dark">
+      <div ref={mapContainer} className="w-full h-full" style={{ opacity: 0.98 }} />
       {mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#0e1420]/95 z-10 backdrop-blur-sm">
-          <div className="bg-[#111827]/95 p-6 rounded-lg shadow-2xl max-w-md mx-4 border border-[#374151]/40 backdrop-blur-md">
-            <h3 className="text-base font-light text-secondary mb-2">Map Error</h3>
+        <div className="absolute inset-0 flex items-center justify-center bg-luxury-dark/95 z-10 backdrop-blur-md">
+          <div className="card-luxury p-6 rounded-lg max-w-md mx-4">
+            <h3 className="text-base font-light text-label text-secondary mb-2.5">MAP ERROR</h3>
             <p className="text-sm text-tertiary mb-4 font-light">{mapError}</p>
-            <p className="text-xs text-tertiary font-light">
-              Add your Mapbox token to <code className="bg-[#0e1420] px-1.5 py-0.5 rounded text-secondary">.env.local</code>:
+            <p className="text-xs text-label text-tertiary font-light">
+              Add your Mapbox token to <code className="bg-[#0f172a] px-1.5 py-0.5 rounded text-secondary">.env.local</code>:
               <br />
-              <code className="bg-[#0e1420] px-1.5 py-0.5 rounded text-secondary">NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your_token</code>
+              <code className="bg-[#0f172a] px-1.5 py-0.5 rounded text-secondary">NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your_token</code>
             </p>
           </div>
         </div>
       )}
       <style jsx global>{`
         .mapboxgl-popup-content {
-          padding: 14px;
+          padding: 16px;
           font-family: 'Inter', system-ui, sans-serif;
-          background-color: rgba(17, 24, 39, 0.95);
-          color: #e5e7eb;
-          border: 1px solid rgba(107, 114, 128, 0.2);
-          backdrop-filter: blur(8px);
+          background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
+          color: #f8fafc;
+          border: 1px solid rgba(51, 65, 85, 0.3);
+          backdrop-filter: blur(12px);
           font-weight: 300;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
         }
         .mapboxgl-popup-close-button {
           font-size: 18px;
           padding: 4px 8px;
-          color: #6b7280;
+          color: #94a3b8;
+          transition: opacity 300ms ease;
           font-weight: 300;
         }
         .mapboxgl-popup-close-button:hover {

@@ -214,7 +214,7 @@ export default function Home() {
 
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#0e1420] text-primary">
+    <div className="relative h-screen w-screen overflow-hidden bg-luxury-dark text-primary">
       {/* MAP — always bottom layer, full screen */}
       <div className="absolute inset-0 z-0">
         <MapView
@@ -226,11 +226,11 @@ export default function Home() {
         />
       </div>
 
-      {/* TOP CONTROL BAR — overlay */}
-      <div className="absolute top-0 left-0 right-0 z-20 bg-[#0e1420]/95 backdrop-blur-sm border-b border-[#1f2937]/50">
-        <div className="px-6 py-2.5">
+      {/* TOP CONTROL BAR — luxury overlay */}
+      <div className="absolute top-0 left-0 right-0 z-20 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30">
+        <div className="px-6 py-3">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-sm font-light text-secondary tracking-wide">ScoutRadius</h1>
+            <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
           </div>
           <Controls 
             onSearch={handleSearch} 
@@ -245,37 +245,37 @@ export default function Home() {
         </div>
       </div>
 
-      {/* LEFT STATS CARDS — overlay, floating */}
-      <div className="absolute left-4 top-28 z-20 space-y-3 pointer-events-none">
+      {/* LEFT STATS CARDS — luxury overlay, floating */}
+      <div className="absolute left-5 top-32 z-20 space-y-3 pointer-events-none">
         <div className="pointer-events-auto">
-          <div className="card-dark rounded-lg px-4 py-3 backdrop-blur-md" style={{ background: 'rgba(17, 24, 39, 0.85)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
+          <div className="card-luxury rounded-lg px-5 py-4">
             <div className="text-2xl font-light text-numeric text-primary">{totalClubs}</div>
-            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Total Locations</div>
+            <div className="text-[10px] text-label text-tertiary mt-1">TOTAL LOCATIONS</div>
           </div>
         </div>
         <div className="pointer-events-auto">
-          <div className="card-dark rounded-lg px-4 py-3 backdrop-blur-md" style={{ background: 'rgba(17, 24, 39, 0.85)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
-            <div className="text-2xl font-light text-numeric accent-teal">{highConfidenceClubs}</div>
-            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Club Count</div>
+          <div className="card-luxury rounded-lg px-5 py-4">
+            <div className="text-2xl font-light text-numeric accent-emerald">{highConfidenceClubs}</div>
+            <div className="text-[10px] text-label text-tertiary mt-1">CLUB COUNT</div>
           </div>
         </div>
         <div className="pointer-events-auto">
-          <div className="card-dark rounded-lg px-4 py-3 backdrop-blur-md" style={{ background: 'rgba(17, 24, 39, 0.85)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
-            <div className="text-2xl font-light text-numeric text-primary">{avgDriveTime || '—'}</div>
-            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Avg Drive Time</div>
+          <div className="card-luxury rounded-lg px-5 py-4">
+            <div className="text-2xl font-light text-numeric accent-gold">{avgDriveTime || '—'}</div>
+            <div className="text-[10px] text-label text-tertiary mt-1">AVG DRIVE TIME</div>
           </div>
         </div>
         <div className="pointer-events-auto">
-          <div className="card-dark rounded-lg px-4 py-3 backdrop-blur-md" style={{ background: 'rgba(17, 24, 39, 0.85)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
+          <div className="card-luxury rounded-lg px-5 py-4">
             <div className="text-2xl font-light text-numeric text-primary">{avgDistance ? avgDistance.toFixed(1) : '—'}</div>
-            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Avg Distance (mi)</div>
+            <div className="text-[10px] text-label text-tertiary mt-1">AVG DISTANCE (MI)</div>
           </div>
         </div>
       </div>
 
-      {/* RIGHT RESULTS PANEL — overlay, fixed width */}
-      <div className="absolute right-4 top-28 bottom-4 z-20 w-[420px] pointer-events-none">
-        <div className="h-full pointer-events-auto flex flex-col bg-[#0e1420]/95 backdrop-blur-sm border border-[#1f2937]/30 rounded-lg overflow-hidden">
+      {/* RIGHT RESULTS PANEL — luxury overlay, fixed width */}
+      <div className="absolute right-5 top-32 bottom-5 z-20 w-[420px] pointer-events-none">
+        <div className="h-full pointer-events-auto flex flex-col bg-luxury-card backdrop-blur-md border border-[#334155]/30 rounded-lg overflow-hidden">
           {/* ALWAYS MOUNTED — never conditionally rendered */}
           <ResultsTable
             places={places}

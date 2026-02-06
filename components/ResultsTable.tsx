@@ -195,53 +195,53 @@ export default function ResultsTable(props: ResultsTableProps) {
 
   return (
     <div className="flex flex-col h-full bg-transparent">
-      {/* Header with Export */}
-      <div className="px-4 py-3 border-b border-[#1f2937]/30 flex-shrink-0">
+      {/* Header with Export - luxury styling */}
+      <div className="px-5 py-3.5 border-b border-[#334155]/30 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-light text-tertiary uppercase tracking-wider">Ranked Results</h2>
+          <h2 className="text-xs font-light text-label text-tertiary">RANKED RESULTS</h2>
           <button
             onClick={onExport}
-            className="px-2.5 py-1 text-xs font-light text-tertiary hover:text-secondary uppercase tracking-wider transition-colors"
+            className="px-3 py-1.5 text-xs font-light text-label text-tertiary hover:text-secondary transition-luxury hover:opacity-80"
           >
-            Export
+            EXPORT
           </button>
         </div>
         
-        {/* Status indicators */}
+        {/* Status indicators - luxury micro-labels */}
         {(onlyClubsActive || recreationalHidden) && (
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-3 mt-2.5">
             {onlyClubsActive && (
-              <div className="text-[10px] text-tertiary uppercase tracking-wider">
-                Sorted by Confidence
+              <div className="text-[10px] text-label text-tertiary opacity-70">
+                SORTED BY CONFIDENCE
               </div>
             )}
             {recreationalHidden && (
-              <div className="text-[10px] text-tertiary uppercase tracking-wider">
-                Recreational Hidden
+              <div className="text-[10px] text-label text-tertiary opacity-70">
+                RECREATIONAL HIDDEN
               </div>
             )}
           </div>
         )}
       </div>
       
-      {/* Search/Filter */}
-      <div className="px-4 py-2.5 border-b border-[#1f2937]/30 space-y-2">
+      {/* Search/Filter - luxury inputs */}
+      <div className="px-5 py-3 border-b border-[#334155]/30 space-y-2.5">
         <input
           type="text"
           placeholder="Filter ranking..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-3 py-1.5 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-sm text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 font-light backdrop-blur-sm"
+          className="w-full px-3.5 py-2 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-sm text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 font-light transition-luxury backdrop-blur-sm"
         />
         {sports.length > 0 && (
           <select
             value={filterSport}
             onChange={(e) => setFilterSport(e.target.value)}
-            className="w-full px-3 py-1.5 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-sm text-primary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 font-light backdrop-blur-sm"
+            className="w-full px-3.5 py-2 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-sm text-primary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 font-light transition-luxury backdrop-blur-sm"
           >
             <option value="all">All Sports</option>
             {sports.map(sport => (
-              <option key={sport} value={sport} className="bg-[#111827]">{sport}</option>
+              <option key={sport} value={sport} className="bg-[#0f172a]">{sport}</option>
             ))}
           </select>
         )}
@@ -251,11 +251,11 @@ export default function ResultsTable(props: ResultsTableProps) {
       <div className="flex-1 overflow-auto">
         {filteredAndSorted.length === 0 ? (
           /* Section 3: Empty State - Never Blank */
-          <div className="px-4 py-8">
-            <div className="card-dark rounded-lg px-4 py-6 text-center">
-              <div className="text-sm font-light text-tertiary mb-2">No qualifying clubs under current constraints.</div>
-              <div className="text-xs text-tertiary font-light mt-3">
-                Adjust drive time or toggle priority
+          <div className="px-5 py-10">
+            <div className="card-luxury rounded-lg px-5 py-8 text-center">
+              <div className="text-sm font-light text-secondary mb-2.5">No qualifying clubs under current constraints.</div>
+              <div className="text-xs text-label text-tertiary opacity-70 mt-3">
+                ADJUST DRIVE TIME OR TOGGLE PRIORITY
               </div>
             </div>
           </div>
@@ -267,30 +267,69 @@ export default function ResultsTable(props: ResultsTableProps) {
               const clubScore = place.clubScore ?? 0;
               const isSelected = selectedPlaceId === place.place_id;
               
-              // Confidence indicator (dot/bar style)
-              let confidenceIndicator: JSX.Element;
-              if (clubScore >= 4) {
-                confidenceIndicator = <div className="w-1.5 h-1.5 rounded-full bg-[#14b8a6]"></div>;
-              } else if (clubScore >= 2) {
-                confidenceIndicator = <div className="w-1.5 h-1.5 rounded-full bg-[#64748b]"></div>;
+              // Luxury confidence tier system
+              // Elite (80-100): Gold with ★ icon
+              // Premium (60-79): Emerald with ◆ icon
+              // Standard (40-59): Slate with ○ icon
+              // Basic (0-39): Subdued slate with · icon
+              let confidenceTier: {
+                label: string;
+                icon: string;
+                colorClass: string;
+                bgClass: string;
+              };
+              
+              if (clubScore >= 80) {
+                confidenceTier = {
+                  label: 'Elite',
+                  icon: '★',
+                  colorClass: 'confidence-elite',
+                  bgClass: 'bg-[#fbbf24]/10',
+                };
+              } else if (clubScore >= 60) {
+                confidenceTier = {
+                  label: 'Premium',
+                  icon: '◆',
+                  colorClass: 'confidence-premium',
+                  bgClass: 'bg-[#10b981]/10',
+                };
+              } else if (clubScore >= 40) {
+                confidenceTier = {
+                  label: 'Standard',
+                  icon: '○',
+                  colorClass: 'confidence-standard',
+                  bgClass: 'bg-[#64748b]/10',
+                };
               } else {
-                confidenceIndicator = <div className="w-1.5 h-1.5 rounded-full bg-[#475569] opacity-60"></div>;
+                confidenceTier = {
+                  label: 'Basic',
+                  icon: '·',
+                  colorClass: 'confidence-basic',
+                  bgClass: 'bg-[#475569]/10',
+                };
               }
               
-              // Age group badges - subtle, muted
+              const confidenceIndicator = (
+                <div className={`flex items-center gap-1.5 ${confidenceTier.colorClass}`}>
+                  <span className="text-xs font-light">{confidenceTier.icon}</span>
+                  <span className="text-[10px] font-light text-label opacity-70">{confidenceTier.label}</span>
+                </div>
+              );
+              
+              // Age group badges - luxury styling
               const ageBadges: JSX.Element[] = [];
               if (place.ageGroups) {
                 if (place.ageGroups.youth >= 2) {
-                  ageBadges.push(<span key="youth" className="text-[10px] px-1.5 py-0.5 rounded bg-[#14b8a6]/15 text-[#14b8a6] font-light uppercase tracking-wider">Youth</span>);
+                  ageBadges.push(<span key="youth" className="text-[10px] px-2 py-0.5 rounded-md bg-[#10b981]/10 border border-[#10b981]/20 text-[#10b981] font-light text-label">YOUTH</span>);
                 }
                 if (place.ageGroups.highSchool >= 2) {
-                  ageBadges.push(<span key="hs" className="text-[10px] px-1.5 py-0.5 rounded bg-[#64748b]/15 text-[#64748b] font-light uppercase tracking-wider">HS</span>);
+                  ageBadges.push(<span key="hs" className="text-[10px] px-2 py-0.5 rounded-md bg-[#64748b]/10 border border-[#64748b]/20 text-[#64748b] font-light text-label">HS</span>);
                 }
                 if (place.ageGroups.elite >= 2) {
-                  ageBadges.push(<span key="elite" className="text-[10px] px-1.5 py-0.5 rounded bg-[#f59e0b]/15 text-[#f59e0b] font-light uppercase tracking-wider">Elite</span>);
+                  ageBadges.push(<span key="elite" className="text-[10px] px-2 py-0.5 rounded-md bg-[#fbbf24]/10 border border-[#fbbf24]/20 text-[#fbbf24] font-light text-label">ELITE</span>);
                 }
                 if (place.ageGroups.adult >= 2) {
-                  ageBadges.push(<span key="adult" className="text-[10px] px-1.5 py-0.5 rounded bg-[#6b7280]/15 text-[#6b7280] font-light uppercase tracking-wider">Adult</span>);
+                  ageBadges.push(<span key="adult" className="text-[10px] px-2 py-0.5 rounded-md bg-[#94a3b8]/10 border border-[#94a3b8]/20 text-[#94a3b8] font-light text-label">ADULT</span>);
                 }
               }
               
@@ -298,35 +337,41 @@ export default function ResultsTable(props: ResultsTableProps) {
                 <div
                   key={place.place_id}
                   onClick={() => onPlaceClick(place.place_id)}
-                  className={`px-4 py-3 cursor-pointer transition-all ${
+                  className={`px-4 py-3.5 cursor-pointer transition-luxury ${
                     isSelected 
-                      ? 'bg-[#1f2937]/40 border-l-2 border-l-[#f59e0b]' 
-                      : 'hover:bg-[#1f2937]/20'
+                      ? 'card-luxury border-l-2 border-l-[#fbbf24]/40' 
+                      : 'hover-luxury hover:bg-luxury-card'
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     {/* Rank number */}
-                    <div className="flex-shrink-0 w-6">
-                      <span className="text-xs font-light text-tertiary">{index + 1}</span>
+                    <div className="flex-shrink-0 w-7">
+                      <span className="text-xs font-light text-numeric text-tertiary">{index + 1}</span>
                     </div>
                     
                     {/* Main content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3 mb-1.5">
+                      <div className="flex items-start justify-between gap-4 mb-2">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-light text-primary leading-tight mb-1">{displayName}</h3>
-                          {place.isClub && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#14b8a6]/15 text-[#14b8a6] font-light uppercase tracking-wider inline-block mb-1">
-                              Club
+                          <h3 className="text-sm font-light text-primary leading-tight mb-1.5 tracking-tight">{displayName}</h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {place.isClub && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#10b981]/15 text-[#10b981] font-light text-label">
+                                Club
+                              </span>
+                            )}
+                            {/* Confidence tier badge */}
+                            <span className={`text-[10px] px-2 py-0.5 rounded-md ${confidenceTier.bgClass} ${confidenceTier.colorClass} font-light text-label`}>
+                              {confidenceTier.icon} {confidenceTier.label}
                             </span>
-                          )}
+                          </div>
                         </div>
                         
                         {/* Drive time - right aligned, emphasized */}
                         {place.driveTime !== null && place.driveTime !== undefined && (
                           <div className="flex-shrink-0 text-right">
-                            <div className="text-base font-light text-numeric text-primary">{place.driveTime}</div>
-                            <div className="text-[10px] text-tertiary uppercase tracking-wider">min</div>
+                            <div className="text-lg font-light text-numeric accent-gold">{place.driveTime}</div>
+                            <div className="text-[10px] text-label text-tertiary">MIN</div>
                           </div>
                         )}
                       </div>

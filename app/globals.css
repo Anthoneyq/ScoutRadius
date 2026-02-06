@@ -21,52 +21,121 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0e1420; /* Deep charcoal / near-black */
-  color: #e5e7eb; /* Off-white text */
-  font-weight: 300; /* Light weight for headings */
+  background-color: #030712; /* Deep slate/charcoal (950) - sophisticated, not pure black */
+  color: #f8fafc; /* Light text - airy, confident */
+  font-weight: 300; /* Light typography - signature luxury look */
 }
 
-/* Refined typography */
+/* Refined typography - luxury brand aesthetic */
 h1, h2, h3, h4, h5, h6 {
   font-weight: 300;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.02em; /* Wide letter-spacing - luxury brand aesthetic */
 }
 
-/* Pergamum-style dark theme utilities */
+/* Luxury design system utilities */
 @layer utilities {
+  /* Typography - precision instruments feel */
   .text-numeric {
-    font-weight: 400; /* Slightly heavier for numbers, but restrained */
-    letter-spacing: -0.02em;
+    font-weight: 300; /* Light weight for numbers - signature luxury look */
+    letter-spacing: -0.03em; /* Tight tracking on numbers - precision */
   }
   
-  .card-dark {
-    background-color: rgba(17, 24, 39, 0.6); /* Dark glass effect */
-    border: 1px solid rgba(107, 114, 128, 0.15);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(8px);
+  .text-label {
+    font-weight: 300;
+    letter-spacing: 0.1em; /* Wide letter-spacing on labels */
+    text-transform: uppercase;
+    font-size: 0.7rem;
   }
   
+  /* Dark glass cards with subtle ambient glow */
+  .card-luxury {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%);
+    border: 1px solid rgba(51, 65, 85, 0.3); /* Minimal borders - barely visible slate-700/50 */
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.6), /* Dramatic shadows for depth */
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08), /* Subtle ambient glow */
+      0 0 0 1px rgba(245, 158, 11, 0.05); /* Barely-there gold accent */
+    backdrop-filter: blur(12px);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); /* 300ms transitions - elegant */
+  }
+  
+  .card-luxury:hover {
+    box-shadow: 
+      0 12px 48px rgba(0, 0, 0, 0.7),
+      0 4px 16px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 0 1px rgba(245, 158, 11, 0.15), /* Subtle amber glow on hover */
+      0 0 24px rgba(245, 158, 11, 0.1); /* Gold highlighting */
+    transform: translateY(-1px);
+  }
+  
+  /* Color palette - luxury signals */
   .accent-gold {
-    color: #f59e0b; /* Gold/amber for drive-time polygon */
+    color: #fbbf24; /* Warm gold (amber 400) - traditional luxury signal */
   }
   
-  .accent-teal {
-    color: #14b8a6; /* Muted teal for markers */
+  .accent-gold-500 {
+    color: #f59e0b; /* Amber 500 - deeper gold */
+  }
+  
+  .accent-emerald {
+    color: #10b981; /* Emerald green - premium tier */
   }
   
   .accent-slate {
-    color: #64748b; /* Slate for secondary markers */
+    color: #64748b; /* Slate - subdued, refined */
   }
   
+  .bg-luxury-dark {
+    background-color: #030712; /* Deep slate/charcoal (950) */
+  }
+  
+  .bg-luxury-card {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%);
+  }
+  
+  /* Text colors - sophisticated hierarchy */
   .text-primary {
-    color: #e5e7eb; /* Off-white */
+    color: #f8fafc; /* Light text - airy, confident */
   }
   
   .text-secondary {
-    color: #9ca3af; /* Muted gray */
+    color: #cbd5e1; /* Muted - refined */
   }
   
   .text-tertiary {
-    color: #6b7280; /* Low-contrast slate */
+    color: #94a3b8; /* Low-contrast slate - subtle */
+  }
+  
+  /* Confidence tier indicators */
+  .confidence-elite {
+    color: #fbbf24; /* Gold */
+  }
+  
+  .confidence-premium {
+    color: #10b981; /* Emerald */
+  }
+  
+  .confidence-standard {
+    color: #64748b; /* Slate */
+  }
+  
+  .confidence-basic {
+    color: #475569; /* Subdued slate */
+  }
+  
+  /* Smooth transitions - never rushed */
+  .transition-luxury {
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Opacity changes over color shifts */
+  .hover-luxury {
+    transition: opacity 300ms ease, transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-luxury:hover {
+    opacity: 0.9;
   }
 }
