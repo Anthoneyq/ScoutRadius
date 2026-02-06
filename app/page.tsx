@@ -25,6 +25,7 @@ export default function Home() {
   const [tags, setTags] = useState<Record<string, string>>({});
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Mobile sidebar collapsed state (shows icons)
   
   // Track if we're loading from localStorage to prevent save loops
   const isInitialLoadRef = useRef(true);
@@ -142,11 +143,7 @@ export default function Home() {
 
       let searchData;
       try {
-        const responseText = await searchResponse.text();
-        if (!responseText) {
-          throw new Error('Empty response from server');
-        }
-        searchData = JSON.parse(responseText);
+        searchData = await searchResponse.json();
       } catch (parseError) {
         console.error('Failed to parse search response:', parseError);
         alert('Invalid response from server. Please try again.');
@@ -165,7 +162,8 @@ export default function Home() {
       
       setPlaces(foundPlaces);
       
-      // Close sidebar on mobile after search completes
+      // Collapse sidebar to icon view on mobile after search completes
+      setSidebarCollapsed(true);
       setSidebarOpen(false);
       
       // Log helpful debug info if no results
@@ -258,30 +256,52 @@ export default function Home() {
         />
       </div>
 
-      {/* MOBILE HAMBURGER BUTTON — always visible on mobile */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-luxury-card backdrop-blur-md border border-[#334155]/30 rounded-md text-primary hover:border-[#fbbf24]/30 hover:shadow-[0_0_16px_rgba(251,191,36,0.15)] transition-luxury"
-        aria-label="Toggle sidebar"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          {sidebarOpen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-          )}
-        </svg>
-      </button>
+      {/* MOBILE COLLAPSED SIDEBAR — icon bar when collapsed (shows after Analyze) */}
+      <div className={`md:hidden fixed left-0 top-14 bottom-0 z-40 w-12 bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out ${
+        sidebarCollapsed && !sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="flex flex-col items-center py-4 space-y-3">
+          <button
+            onClick={() => {
+              setSidebarOpen(true);
+              setSidebarCollapsed(false);
+            }}
+            className="p-2 text-primary hover:text-[#fbbf24] transition-luxury"
+            aria-label="Open menu"
+            title="Menu"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <button
+            onClick={() => {
+              setSidebarOpen(true);
+              setSidebarCollapsed(false);
+            }}
+            className="p-2 text-primary hover:text-[#fbbf24] transition-luxury"
+            aria-label="Open results"
+            title="Results"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+          </button>
+        </div>
+      </div>
 
-      {/* MOBILE SIDEBAR — slides in from left on mobile */}
-      <div className={`md:hidden fixed inset-y-0 left-0 z-40 w-[85vw] max-w-sm bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+      {/* MOBILE SIDEBAR — slides in from left on mobile (narrower) */}
+      <div className={`md:hidden fixed top-14 left-0 bottom-0 z-40 w-[75vw] max-w-xs bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Sidebar Header */}
         <div className="sticky top-0 bg-luxury-card border-b border-[#334155]/30 px-4 py-3 flex items-center justify-between z-10">
           <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
           <button
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => {
+              setSidebarOpen(false);
+              setSidebarCollapsed(true);
+            }}
             className="p-1 text-tertiary hover:text-primary transition-luxury"
             aria-label="Close sidebar"
           >
@@ -324,11 +344,48 @@ export default function Home() {
         </div>
       </div>
 
+      {/* MOBILE TOP BAR — hamburger + location input always visible */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30 px-3 py-2 flex items-center gap-2">
+        <button
+          onClick={() => {
+            setSidebarOpen(!sidebarOpen);
+            setSidebarCollapsed(false);
+          }}
+          className="p-2 text-primary hover:text-[#fbbf24] transition-luxury flex-shrink-0"
+          aria-label="Toggle sidebar"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {sidebarOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+        <div className="flex-1 min-w-0">
+          <input
+            type="text"
+            placeholder="Starting location..."
+            className="w-full px-3 py-2 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-sm text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 font-light transition-luxury"
+            onClick={() => {
+              if (!sidebarOpen) {
+                setSidebarOpen(true);
+                setSidebarCollapsed(false);
+              }
+            }}
+            readOnly
+          />
+        </div>
+      </div>
+
       {/* MOBILE SIDEBAR BACKDROP — closes sidebar when clicked */}
       {sidebarOpen && (
         <div
           className="md:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => {
+            setSidebarOpen(false);
+            setSidebarCollapsed(true);
+          }}
         />
       )}
 
