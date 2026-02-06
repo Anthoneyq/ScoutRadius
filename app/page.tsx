@@ -165,6 +165,9 @@ export default function Home() {
       
       setPlaces(foundPlaces);
       
+      // Close sidebar on mobile after search completes
+      setSidebarOpen(false);
+      
       // Log helpful debug info if no results
       if (foundPlaces.length === 0) {
         if (searchData.debug?.bypassedFiltering) {
