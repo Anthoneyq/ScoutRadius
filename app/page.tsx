@@ -204,48 +204,87 @@ export default function Home() {
   const avgDriveTime = places.length > 0
     ? Math.round(places.reduce((sum, p) => sum + (p.driveTime ?? 0), 0) / places.length)
     : 0;
+  const avgDistance = places.length > 0
+    ? places.reduce((sum, p) => sum + (p.distance ?? 0), 0) / places.length
+    : 0;
   const youthFocused = places.filter(p => (p.ageGroups?.youth ?? 0) >= 2).length;
   const youthFocusedPercent = totalClubs > 0 ? Math.round((youthFocused / totalClubs) * 100) : 0;
   const mixedRecreational = places.filter(p => (p.clubScore ?? 0) < 3).length;
-  const mixedRecreationalPercent = totalClubs > 0 ? Math.round((mixedRecreational / totalClubs) * 100) : 0;
+  const mixedRecreationalPercent = totalClubs > 0 ? Math.round((mixedRecreational / totalClubs) * 100) : 100;
+
+  // CRITICAL: Log places data to verify rendering issue
+  useEffect(() => {
+    console.log("Places count:", places?.length, places);
+    console.log("Places array is array:", Array.isArray(places));
+    if (places.length > 0) {
+      console.log("First place:", places[0]);
+    }
+  }, [places]);
 
   return (
-    <div className="h-screen flex flex-col bg-[#0e1420] text-primary">
-      {/* Minimal Top Bar - Academic Style */}
-      <header className="px-6 py-2.5 border-b border-[#1f2937]/50">
-        <div className="flex items-center justify-between">
-          <h1 className="text-sm font-light text-secondary tracking-wide">ScoutRadius</h1>
-          {/* Future navigation space - low emphasis */}
-        </div>
-      </header>
+    <div className="relative h-screen w-screen overflow-hidden bg-[#0e1420] text-primary">
+      {/* MAP — always bottom layer, full screen */}
+      <div className="absolute inset-0 z-0">
+        <MapView
+          origin={origin}
+          places={places}
+          isochroneGeoJSON={isochroneGeoJSON}
+          selectedPlaceId={selectedPlaceId}
+          onPlaceClick={handlePlaceClick}
+        />
+      </div>
 
-      {/* Control Strip - Above Map */}
-      <Controls 
-        onSearch={handleSearch} 
-        isLoading={isLoading}
-        onlyClubs={onlyClubs}
-        onOnlyClubsChange={setOnlyClubs}
-        showRecreational={showRecreational}
-        onShowRecreationalChange={setShowRecreational}
-        selectedAgeGroups={selectedAgeGroups}
-        onAgeGroupsChange={setSelectedAgeGroups}
-      />
-
-      {/* Main Canvas: Map-First Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Map - 70-75% of horizontal space, visually dominant */}
-        <div className="flex-[3] h-full border-r border-[#1f2937]/30">
-          <MapView
-            origin={origin}
-            places={places}
-            isochroneGeoJSON={isochroneGeoJSON}
-            selectedPlaceId={selectedPlaceId}
-            onPlaceClick={handlePlaceClick}
+      {/* TOP CONTROL BAR — overlay */}
+      <div className="absolute top-0 left-0 right-0 z-20 bg-[#0e1420]/95 backdrop-blur-sm border-b border-[#1f2937]/50">
+        <div className="px-6 py-2.5">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-sm font-light text-secondary tracking-wide">ScoutRadius</h1>
+          </div>
+          <Controls 
+            onSearch={handleSearch} 
+            isLoading={isLoading}
+            onlyClubs={onlyClubs}
+            onOnlyClubsChange={setOnlyClubs}
+            showRecreational={showRecreational}
+            onShowRecreationalChange={setShowRecreational}
+            selectedAgeGroups={selectedAgeGroups}
+            onAgeGroupsChange={setSelectedAgeGroups}
           />
         </div>
+      </div>
 
-        {/* Intelligence Panel - Right Side */}
-        <div className="flex-1 overflow-hidden bg-[#0e1420] flex flex-col">
+      {/* LEFT STATS CARDS — overlay, floating */}
+      <div className="absolute left-4 top-28 z-20 space-y-3 pointer-events-none">
+        <div className="pointer-events-auto">
+          <div className="card-dark rounded-lg px-4 py-3 backdrop-blur-md" style={{ background: 'rgba(17, 24, 39, 0.85)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
+            <div className="text-2xl font-light text-numeric text-primary">{totalClubs}</div>
+            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Total Locations</div>
+          </div>
+        </div>
+        <div className="pointer-events-auto">
+          <div className="card-dark rounded-lg px-4 py-3 backdrop-blur-md" style={{ background: 'rgba(17, 24, 39, 0.85)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
+            <div className="text-2xl font-light text-numeric accent-teal">{highConfidenceClubs}</div>
+            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Club Count</div>
+          </div>
+        </div>
+        <div className="pointer-events-auto">
+          <div className="card-dark rounded-lg px-4 py-3 backdrop-blur-md" style={{ background: 'rgba(17, 24, 39, 0.85)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
+            <div className="text-2xl font-light text-numeric text-primary">{avgDriveTime || '—'}</div>
+            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Avg Drive Time</div>
+          </div>
+        </div>
+        <div className="pointer-events-auto">
+          <div className="card-dark rounded-lg px-4 py-3 backdrop-blur-md" style={{ background: 'rgba(17, 24, 39, 0.85)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
+            <div className="text-2xl font-light text-numeric text-primary">{avgDistance ? avgDistance.toFixed(1) : '—'}</div>
+            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Avg Distance (mi)</div>
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT RESULTS PANEL — overlay, fixed width */}
+      <div className="absolute right-4 top-28 bottom-4 z-20 w-[420px] pointer-events-none">
+        <div className="h-full pointer-events-auto flex flex-col bg-[#0e1420]/95 backdrop-blur-sm border border-[#1f2937]/30 rounded-lg overflow-hidden">
+          {/* ALWAYS MOUNTED — never conditionally rendered */}
           <ResultsTable
             places={places}
             selectedPlaceId={selectedPlaceId}

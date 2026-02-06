@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 interface Place {
   place_id: string;
@@ -182,34 +182,24 @@ export default function ResultsTable(props: ResultsTableProps) {
     return sortDirection === 'asc' ? '↑' : '↓';
   };
 
+  // CRITICAL: Always render - never conditionally mount
+  // Log to verify places are being received
+  useEffect(() => {
+    console.log("ResultsTable - Places received:", places?.length, Array.isArray(places));
+  }, [places]);
+
   return (
-    <div className="flex flex-col h-full bg-[#0e1420]">
-      {/* Section 1: Area Summary - Always Visible */}
-      <div className="px-4 py-3 border-b border-[#1f2937]/30">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-light text-tertiary uppercase tracking-wider">Coverage</h2>
+    <div className="flex flex-col h-full bg-transparent">
+      {/* Header with Export */}
+      <div className="px-4 py-3 border-b border-[#1f2937]/30 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-light text-tertiary uppercase tracking-wider">Ranked Results</h2>
           <button
             onClick={onExport}
             className="px-2.5 py-1 text-xs font-light text-tertiary hover:text-secondary uppercase tracking-wider transition-colors"
           >
             Export
           </button>
-        </div>
-        
-        {/* Compact stat strip - Always show, even if 0 */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="card-dark rounded-lg px-3 py-2">
-            <div className="text-xl font-light text-numeric text-primary">{totalClubs}</div>
-            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Total</div>
-          </div>
-          <div className="card-dark rounded-lg px-3 py-2">
-            <div className="text-xl font-light text-numeric accent-teal">{highConfidenceClubs}</div>
-            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Confidence</div>
-          </div>
-          <div className="card-dark rounded-lg px-3 py-2">
-            <div className="text-xl font-light text-numeric text-primary">{avgDriveTime || '—'}</div>
-            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Avg Time</div>
-          </div>
         </div>
         
         {/* Status indicators */}
@@ -229,7 +219,7 @@ export default function ResultsTable(props: ResultsTableProps) {
         )}
       </div>
       
-      {/* Section 2: Search/Filter */}
+      {/* Search/Filter */}
       <div className="px-4 py-2.5 border-b border-[#1f2937]/30 space-y-2">
         <input
           type="text"
@@ -258,10 +248,7 @@ export default function ResultsTable(props: ResultsTableProps) {
           /* Section 3: Empty State - Never Blank */
           <div className="px-4 py-8">
             <div className="card-dark rounded-lg px-4 py-6 text-center">
-              <div className="text-sm font-light text-tertiary mb-2">No qualifying clubs</div>
-              <div className="text-xs text-tertiary font-light">
-                within current constraints
-              </div>
+              <div className="text-sm font-light text-tertiary mb-2">No qualifying clubs under current constraints.</div>
               <div className="text-xs text-tertiary font-light mt-3">
                 Adjust drive time or toggle priority
               </div>

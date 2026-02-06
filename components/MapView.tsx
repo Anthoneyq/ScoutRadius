@@ -284,7 +284,7 @@ export default function MapView(props: MapViewProps) {
 
   return (
     <div className="w-full h-full relative bg-[#0e1420]">
-      <div ref={mapContainer} className="w-full h-full" />
+      <div ref={mapContainer} className="w-full h-full" style={{ opacity: 0.95 }} />
       {mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#0e1420]/95 z-10 backdrop-blur-sm">
           <div className="bg-[#111827]/95 p-6 rounded-lg shadow-2xl max-w-md mx-4 border border-[#374151]/40 backdrop-blur-md">
