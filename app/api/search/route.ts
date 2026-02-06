@@ -4,6 +4,8 @@ import { getDirections, metersToMiles, secondsToMinutes } from '@/lib/mapbox';
 import { Place } from '@/lib/googlePlaces';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
+import { queryOSMSportsFacilities, matchPlaceToOSM } from '@/lib/osmLookup';
+import { classifyPlaceWithAI } from '@/lib/aiClassifier';
 
 // FIXED: Expanded queries - rotate multiple queries per sport
 // Google Places (New) is stricter, need broader search terms
@@ -145,6 +147,17 @@ export async function POST(request: NextRequest) {
     // Log search parameters for debugging
     console.log(`Search: origin=[${origin.lng}, ${origin.lat}], driveTime=${driveTimeMinutes}min, radius=${radiusMeters}m, sports=[${sports.join(', ')}]`);
     
+    // Fetch OSM sports facilities once for the entire search area
+    // This is done upfront to avoid repeated API calls
+    let osmFacilities: Awaited<ReturnType<typeof queryOSMSportsFacilities>> = [];
+    try {
+      console.log(`[OSM] Querying sports facilities near [${origin.lat}, ${origin.lng}]`);
+      osmFacilities = await queryOSMSportsFacilities(origin.lat, origin.lng, radiusMeters);
+      console.log(`[OSM] Found ${osmFacilities.length} sports facilities`);
+    } catch (error) {
+      console.debug(`[OSM] Failed to fetch facilities, continuing without OSM signal:`, error);
+    }
+    
     for (const sport of sports) {
       const keywords = SPORT_KEYWORDS[sport.toLowerCase()] || [`${sport} club`];
       
@@ -173,10 +186,55 @@ export async function POST(request: NextRequest) {
             try {
               const place = convertGooglePlace(googlePlace, sport);
               
-              // Calculate club confidence score and isClub flag
-              const clubScore = getClubConfidence(place);
-              place.clubScore = clubScore;
-              place.isClub = clubScore >= 3;
+              // External intelligence signal 1: OSM validation
+              // Check if place matches an OSM sports facility (within 200m)
+              if (osmFacilities.length > 0) {
+                place.osmConfirmed = matchPlaceToOSM(
+                  place.location.lat,
+                  place.location.lng,
+                  osmFacilities,
+                  200 // 200 meter threshold
+                );
+              }
+              
+              // Calculate initial club confidence score (before AI)
+              const initialScore = getClubConfidence(place);
+              place.clubScore = initialScore;
+              
+              // External intelligence signal 2: AI classification (only for ambiguous cases)
+              // Run AI only if:
+              // - Score is between 40-70 (ambiguous)
+              // - OR OSM did NOT confirm
+              // - AND place is in top 30 results (limit to control cost)
+              const shouldRunAI = 
+                (initialScore >= 40 && initialScore <= 70) || 
+                (!place.osmConfirmed && initialScore >= 20);
+              
+              if (shouldRunAI && rawPlacesBeforeFiltering.length < 30) {
+                try {
+                  const aiResult = await classifyPlaceWithAI({
+                    name: place.name,
+                    website: place.website,
+                    reviews: [], // Reviews not available in current data model
+                  });
+                  
+                  if (aiResult) {
+                    place.aiClassification = {
+                      label: aiResult.classification,
+                      confidence: aiResult.confidence,
+                    };
+                    
+                    // Recalculate score with AI signal
+                    place.clubScore = getClubConfidence(place);
+                  }
+                } catch (aiError) {
+                  // Silently fail - AI is optional
+                  console.debug(`[AI] Classification failed for "${place.name}":`, aiError);
+                }
+              }
+              
+              // Set isClub flag based on final score
+              place.isClub = (place.clubScore ?? 0) >= 3;
               
               // Calculate age group scores
               const ageGroups = getAgeGroupScores(place);
@@ -294,9 +352,47 @@ export async function POST(request: NextRequest) {
         for (const googlePlace of fallbackResults) {
           try {
             const place = convertGooglePlace(googlePlace, firstSport);
-            const clubScore = getClubConfidence(place);
-            place.clubScore = clubScore;
-            place.isClub = clubScore >= 3;
+            
+            // External intelligence signal 1: OSM validation
+            if (osmFacilities.length > 0) {
+              place.osmConfirmed = matchPlaceToOSM(
+                place.location.lat,
+                place.location.lng,
+                osmFacilities,
+                200
+              );
+            }
+            
+            // Calculate initial club confidence score (before AI)
+            const initialScore = getClubConfidence(place);
+            place.clubScore = initialScore;
+            
+            // External intelligence signal 2: AI classification (only for ambiguous cases)
+            const shouldRunAI = 
+              (initialScore >= 40 && initialScore <= 70) || 
+              (!place.osmConfirmed && initialScore >= 20);
+            
+            if (shouldRunAI && rawPlacesBeforeFiltering.length < 30) {
+              try {
+                const aiResult = await classifyPlaceWithAI({
+                  name: place.name,
+                  website: place.website,
+                  reviews: [],
+                });
+                
+                if (aiResult) {
+                  place.aiClassification = {
+                    label: aiResult.classification,
+                    confidence: aiResult.confidence,
+                  };
+                  place.clubScore = getClubConfidence(place);
+                }
+              } catch (aiError) {
+                console.debug(`[AI] Classification failed for "${place.name}":`, aiError);
+              }
+            }
+            
+            place.isClub = (place.clubScore ?? 0) >= 3;
             const ageGroups = getAgeGroupScores(place);
             place.ageGroups = ageGroups;
             place.primaryAgeGroup = getPrimaryAgeGroup(ageGroups);
@@ -309,6 +405,8 @@ export async function POST(request: NextRequest) {
             
             if (!isExcluded) {
               rawPlacesBeforeFiltering.push(place);
+              // Also add to allPlaces for processing
+              allPlaces.push(place);
             }
           } catch (err) {
             console.error(`Error processing fallback place:`, err);
@@ -326,6 +424,15 @@ export async function POST(request: NextRequest) {
     
     // Log search pipeline results
     console.log(`Search pipeline: raw=${uniqueRawPlaces.length}, afterPolygon=${totalResultsAfterPolygonFilter}, afterDriveTime=${totalResultsAfterDriveTimeFilter}, final=${uniquePlaces.length}`);
+    
+    // Calculate external intelligence signal counts (for logging and response)
+    const osmConfirmedCount = uniquePlaces.filter(p => p.osmConfirmed).length;
+    const aiClassifiedCount = uniquePlaces.filter(p => p.aiClassification).length;
+    const avgConfidenceScore = uniquePlaces.length > 0
+      ? uniquePlaces.reduce((sum, p) => sum + (p.clubScore ?? 0), 0) / uniquePlaces.length
+      : 0;
+    
+    console.log(`External intelligence: OSM confirmed=${osmConfirmedCount}, AI classified=${aiClassifiedCount}, avg confidence=${avgConfidenceScore.toFixed(1)}`);
     
     // If we found places but filtering removed them all, return raw results for debugging
     // This helps identify if the issue is with filtering logic vs API calls
@@ -442,6 +549,10 @@ export async function POST(request: NextRequest) {
         totalResultsAfterDriveTimeFilter,
         uniquePlacesCount: uniquePlaces.length,
         hasIsochrone: !!isochronePolygon,
+        // External intelligence signals
+        osmConfirmedCount,
+        aiClassifiedCount,
+        avgConfidence: Math.round(avgConfidenceScore * 10) / 10,
       }
     });
   } catch (error) {

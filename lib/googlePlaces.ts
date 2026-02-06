@@ -28,6 +28,13 @@ export interface Place {
     elite: number;
   };
   primaryAgeGroup?: 'youth' | 'highSchool' | 'adult' | 'elite';
+  // External intelligence signals
+  osmConfirmed?: boolean; // Confirmed by OpenStreetMap
+  aiClassification?: {
+    label: string;
+    confidence: number;
+  };
+  confidenceSignals?: string[]; // Explanation tags for scoring
 }
 
 export interface GooglePlaceResult {
@@ -270,37 +277,75 @@ export function convertGooglePlace(googlePlace: GooglePlaceResult, sport?: strin
  * Calculate club confidence score for a place
  * Higher score = more likely to be a competitive club/team
  * Score ranges: ≥3 = Club, 1-2 = Possible, ≤0 = Venue
+ * 
+ * Now includes external intelligence signals:
+ * - OSM validation (structural confirmation)
+ * - AI semantic classification (for ambiguous cases)
  */
 export function getClubConfidence(place: Place): number {
   let score = 0;
   const name = place.name.toLowerCase();
   const websiteLower = (place.website || '').toLowerCase();
+  
+  // Initialize confidence signals array
+  if (!place.confidenceSignals) {
+    place.confidenceSignals = [];
+  }
 
   // Name-based signals (highest weight)
   if (name.match(/club|juniors|academy|select|travel|volleyball club/i)) {
     score += 3;
+    place.confidenceSignals.push("name keywords");
   }
   if (name.match(/bar|restaurant|grill|cantina|pub/i)) {
     score -= 3; // Strong negative signal
+    place.confidenceSignals.push("negative name keywords");
   }
 
   // Place type-based signals
   if (place.types?.includes('sports_club')) {
     score += 2;
+    place.confidenceSignals.push("sports_club type");
   }
   if (place.types?.includes('school')) {
     score += 1;
+    place.confidenceSignals.push("school type");
   }
   if (place.types?.some(type => ['restaurant', 'bar', 'gym', 'fitness_center'].includes(type))) {
     score -= 2;
+    place.confidenceSignals.push("negative type");
   }
 
   // Website-based signals (if available)
   if (place.website) {
     score += 2; // Base score for having a website
+    place.confidenceSignals.push("has website");
     if (websiteLower.match(/tryouts|teams|age groups|12u|14u|16u|18u/i)) {
       score += 2; // Additional boost for club-specific content
+      place.confidenceSignals.push("club-specific website content");
     }
+  }
+
+  // External intelligence signal: OSM validation (strong structural confirmation)
+  if (place.osmConfirmed) {
+    score += 25; // Strong boost for OSM confirmation
+    place.confidenceSignals.push("OSM sports facility match");
+  }
+
+  // External intelligence signal: AI semantic classification
+  if (place.aiClassification) {
+    const ai = place.aiClassification;
+    if (ai.label === "competitive_club") {
+      score += ai.confidence * 40; // Strong positive signal
+      place.confidenceSignals.push(`AI: competitive_club (${Math.round(ai.confidence * 100)}%)`);
+    } else if (ai.label === "recreational") {
+      score += ai.confidence * 10; // Mild positive (still a sports facility)
+      place.confidenceSignals.push(`AI: recreational (${Math.round(ai.confidence * 100)}%)`);
+    } else if (ai.label === "private") {
+      score -= 50; // Strong negative signal
+      place.confidenceSignals.push(`AI: private (${Math.round(ai.confidence * 100)}%)`);
+    }
+    // "unknown" classification doesn't affect score
   }
 
   // Ensure score doesn't go below 0
