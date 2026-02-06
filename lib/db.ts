@@ -6,17 +6,21 @@
 import { neon } from '@neondatabase/serverless';
 import { UserUsage } from './paywall';
 
-if (!process.env.POSTGRES_URL) {
-  throw new Error('POSTGRES_URL environment variable is not set');
+// Lazy initialization - only create SQL client when needed
+function getSql() {
+  const postgresUrl = process.env.POSTGRES_URL;
+  if (!postgresUrl) {
+    throw new Error('POSTGRES_URL environment variable is not set');
+  }
+  return neon(postgresUrl);
 }
-
-const sql = neon(process.env.POSTGRES_URL);
 
 /**
  * Initialize database schema
  */
 export async function initDatabase() {
   try {
+    const sql = getSql();
     await sql`
       CREATE TABLE IF NOT EXISTS user_usage (
         user_id VARCHAR(255) PRIMARY KEY,
@@ -42,6 +46,7 @@ export async function initDatabase() {
  */
 export async function getUserUsage(userId: string): Promise<UserUsage | null> {
   try {
+    const sql = getSql();
     const result = await sql`
       SELECT * FROM user_usage
       WHERE user_id = ${userId}
@@ -80,6 +85,7 @@ async function createUserUsage(userId: string): Promise<UserUsage> {
   };
   
   try {
+    const sql = getSql();
     await sql`
       INSERT INTO user_usage (user_id, plan, ai_classifications_this_month, searches_this_month, last_reset_date)
       VALUES (${userId}, 'free', 0, 0, ${now.toISOString()})
@@ -96,6 +102,7 @@ async function createUserUsage(userId: string): Promise<UserUsage> {
  */
 export async function updateUserUsage(userUsage: UserUsage): Promise<void> {
   try {
+    const sql = getSql();
     await sql`
       UPDATE user_usage
       SET 
@@ -148,6 +155,7 @@ export async function updateUserPlan(
   stripeSubscriptionId?: string
 ): Promise<void> {
   try {
+    const sql = getSql();
     await sql`
       UPDATE user_usage
       SET 
