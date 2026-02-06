@@ -92,7 +92,20 @@ export async function POST(request: NextRequest) {
     }
   }
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error('[Search API] Invalid JSON in request body:', jsonError);
+      return NextResponse.json(
+        { 
+          error: 'Invalid request format. Expected JSON.',
+          places: []
+        },
+        { status: 400 }
+      );
+    }
+    
     const { origin, sports, driveTimeMinutes, isochroneGeoJSON } = body;
 
     if (!origin || !origin.lat || !origin.lng) {

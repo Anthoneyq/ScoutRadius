@@ -118,15 +118,40 @@ export default function Home() {
       });
 
       if (!searchResponse.ok) {
-        const error = await searchResponse.json();
-        const errorMessage = error.error || 'Search failed';
-        console.error('Search API error:', error);
+        let errorMessage = 'Search failed';
+        try {
+          const error = await searchResponse.json();
+          errorMessage = error.error || errorMessage;
+          console.error('Search API error:', error);
+        } catch (parseError) {
+          // If response isn't JSON, try to get text
+          try {
+            const errorText = await searchResponse.text();
+            console.error('Search API error (non-JSON):', errorText);
+            errorMessage = `Server error (${searchResponse.status}): ${errorText.substring(0, 100)}`;
+          } catch (textError) {
+            console.error('Search API error (could not parse):', textError);
+            errorMessage = `Server error (${searchResponse.status})`;
+          }
+        }
         alert(`Search failed: ${errorMessage}`);
         setPlaces([]);
         return;
       }
 
-      const searchData = await searchResponse.json();
+      let searchData;
+      try {
+        const responseText = await searchResponse.text();
+        if (!responseText) {
+          throw new Error('Empty response from server');
+        }
+        searchData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse search response:', parseError);
+        alert('Invalid response from server. Please try again.');
+        setPlaces([]);
+        return;
+      }
       // Safety guard: ensure places is an array
       const foundPlaces = Array.isArray(searchData.places) ? searchData.places : [];
       
