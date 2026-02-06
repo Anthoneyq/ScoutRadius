@@ -60,8 +60,6 @@ export default function ResultsTable(props: ResultsTableProps) {
     avgDriveTime = 0,
     youthFocusedPercent = 0,
     mixedRecreationalPercent = 0,
-    onlyClubsActive = false,
-    recreationalHidden = false,
   } = props || {};
   const [sortField, setSortField] = useState<SortField>('driveTime');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
