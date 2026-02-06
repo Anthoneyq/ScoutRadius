@@ -108,6 +108,14 @@ export async function searchPlaces(
     'places.types', // Include types for filtering
   ].join(',');
 
+  // Log request details for debugging
+  console.log(`[Google Places] Searching: "${query}"`, {
+    location: { lat: location.lat, lng: location.lng },
+    radiusMeters: radius,
+    includedTypes: includedTypes?.join(', ') || 'none',
+    maxResultCount: body.maxResultCount,
+  });
+
   const response = await fetch(url.toString(), {
     method: 'POST',
     headers: {
@@ -129,7 +137,7 @@ export async function searchPlaces(
     } catch {
       // Use text as-is
     }
-    console.error('Google Places API error:', {
+    console.error('[Google Places] API error:', {
       status: response.status,
       statusText: response.statusText,
       error: errorMessage,
@@ -145,12 +153,18 @@ export async function searchPlaces(
   // Google Places API (New) returns results in data.places array
   const places = data.places;
   if (Array.isArray(places)) {
+    console.log(`[Google Places] Found ${places.length} results for "${query}"`);
+    if (places.length === 0) {
+      console.warn(`[Google Places] Zero results for "${query}" - check API key, enabled APIs, and search parameters`);
+    }
     return places;
   }
   
   // If places is not an array, log warning and return empty
   if (places) {
-    console.warn(`Unexpected Places API response format for query "${query}"`);
+    console.warn(`[Google Places] Unexpected response format for query "${query}":`, data);
+  } else {
+    console.warn(`[Google Places] No places array in response for query "${query}"`);
   }
   return [];
 }

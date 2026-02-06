@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
       // Search with each keyword
       for (const keyword of keywords) {
         try {
+          console.log(`[Search API] Searching for "${keyword}" (sport: ${sport})`);
           const results = await searchPlaces(
             keyword,
             { lat: origin.lat, lng: origin.lng },
@@ -157,9 +158,7 @@ export async function POST(request: NextRequest) {
           );
 
           totalResultsFound += results.length;
-          if (results.length > 0) {
-            console.log(`Found ${results.length} results for "${keyword}"`);
-          }
+          console.log(`[Search API] Keyword "${keyword}": ${results.length} raw results from Google Places`);
 
           // Convert and filter results
           for (const googlePlace of results) {
@@ -296,7 +295,8 @@ export async function POST(request: NextRequest) {
     
     // If no places found at all, provide helpful error message
     if (uniquePlaces.length === 0 && uniqueRawPlaces.length === 0) {
-      console.warn(`No places found for search: ${sports.join(', ')} near [${origin.lat}, ${origin.lng}]`);
+      console.warn(`[Search API] No places found for search: ${sports.join(', ')} near [${origin.lat}, ${origin.lng}]`);
+      console.warn(`[Search API] Debug info: totalResultsFound=${totalResultsFound}, radiusMeters=${radiusMeters}, keywords used=${sports.flatMap(s => SPORT_KEYWORDS[s.toLowerCase()] || [`${s} club`]).join(', ')}`);
     }
 
     return NextResponse.json({ 
