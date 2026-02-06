@@ -76,7 +76,7 @@ export async function searchPlaces(
   console.log('Google Places API request:', {
     query,
     location: { lat: location.lat, lng: location.lng },
-    radius: radiusMeters,
+    radius: radius,
     url: url.toString().substring(0, 50) + '...',
   });
 
