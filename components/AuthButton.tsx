@@ -3,9 +3,15 @@
 import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
 
 export default function AuthButton() {
+  // Check if Clerk is configured
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  if (!publishableKey || publishableKey.trim() === '') {
+    return null;
+  }
+  
   const { isSignedIn, isLoaded } = useUser();
   
-  // Handle case where Clerk isn't configured
+  // Handle case where Clerk isn't loaded yet
   if (!isLoaded) {
     return null;
   }

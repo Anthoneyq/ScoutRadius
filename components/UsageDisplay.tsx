@@ -13,11 +13,17 @@ interface UsageData {
 }
 
 export default function UsageDisplay() {
+  // Check if Clerk is configured
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  if (!publishableKey || publishableKey.trim() === '') {
+    return null;
+  }
+  
   const { user, isSignedIn, isLoaded } = useUser();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Handle case where Clerk isn't configured
+  // Handle case where Clerk isn't loaded yet
   if (!isLoaded) {
     return null;
   }

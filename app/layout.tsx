@@ -15,11 +15,19 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Always render ClerkProvider - it handles missing keys gracefully
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   
+  // Only render ClerkProvider if key exists, otherwise render without it
+  if (!publishableKey || publishableKey.trim() === '') {
+    return (
+      <html lang="en">
+        <body className={inter.className}>{children}</body>
+      </html>
+    );
+  }
+  
   return (
-    <ClerkProvider publishableKey={publishableKey || ''}>
+    <ClerkProvider publishableKey={publishableKey}>
       <html lang="en">
         <body className={inter.className}>{children}</body>
       </html>
