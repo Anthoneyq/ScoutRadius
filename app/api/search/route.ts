@@ -5,39 +5,64 @@ import { Place } from '@/lib/googlePlaces';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 
-// Expanded keywords for better discovery
+// Club-intent keywords (avoid generic terms that trigger restaurants/bars)
 const SPORT_KEYWORDS: Record<string, string[]> = {
   'volleyball': [
+    'youth volleyball club',
+    'junior volleyball club',
+    'competitive volleyball club',
+    'volleyball training academy',
     'volleyball club',
-    'volleyball training',
-    'volleyball facility',
-    'sports complex',
-    'athletic club',
-    'sports center',
   ],
   'track and field': [
-    'track club',
-    'track and field',
+    'track and field club',
+    'youth track club',
+    'junior track club',
+    'track and field academy',
     'running club',
     'athletics club',
-    'track facility',
-    'sports complex',
   ],
   'basketball': [
+    'youth basketball club',
+    'junior basketball club',
+    'competitive basketball club',
+    'basketball training academy',
     'basketball club',
-    'basketball training',
-    'basketball facility',
-    'sports complex',
-    'athletic club',
   ],
   'softball': [
+    'youth softball club',
+    'junior softball club',
+    'competitive softball club',
+    'softball training academy',
     'softball club',
-    'softball training',
-    'softball facility',
-    'sports complex',
-    'athletic club',
   ],
 };
+
+// Place types to include (excludes restaurants, bars, retail, etc.)
+const INCLUDED_PLACE_TYPES = [
+  'sports_club',
+  'school',
+  'gym',
+  'recreation_center',
+];
+
+// Keywords that indicate non-club venues (to exclude)
+const EXCLUDED_KEYWORDS = [
+  'bar',
+  'restaurant',
+  'grill',
+  'pub',
+  'cantina',
+  'brew',
+  'tavern',
+  'equinox',
+  'lifetime',
+  'ymca',
+  'rec center',
+  'community center',
+  'fitness center',
+  'health club',
+];
 
 export async function POST(request: NextRequest) {
   try {
@@ -127,7 +152,8 @@ export async function POST(request: NextRequest) {
             keyword,
             { lat: origin.lat, lng: origin.lng },
             radiusMeters,
-            apiKey
+            apiKey,
+            INCLUDED_PLACE_TYPES // Restrict to sports_club, school, gym, recreation_center
           );
 
           totalResultsFound += results.length;
@@ -140,7 +166,18 @@ export async function POST(request: NextRequest) {
             try {
               const place = convertGooglePlace(googlePlace, sport);
               
-              // Collect raw place for debugging
+              // Filter out obvious non-club venues by name
+              const placeNameLower = place.name.toLowerCase();
+              const isExcluded = EXCLUDED_KEYWORDS.some(keyword => 
+                placeNameLower.includes(keyword)
+              );
+              
+              if (isExcluded) {
+                console.log(`Excluding "${place.name}" - matches excluded keywords`);
+                continue;
+              }
+              
+              // Collect raw place for debugging (after exclusion filter)
               rawPlacesBeforeFiltering.push(place);
               
               // Filter by isochrone polygon if available

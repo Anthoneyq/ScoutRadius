@@ -18,6 +18,7 @@ export interface Place {
   sport?: string;
   driveTime?: number;
   distance?: number;
+  types?: string[]; // Place types from Google Places API
 }
 
 export interface GooglePlaceResult {
@@ -59,11 +60,12 @@ export async function searchPlaces(
   query: string,
   location: { lat: number; lng: number },
   radius: number, // meters
-  apiKey: string
+  apiKey: string,
+  includedTypes?: string[] // Optional: restrict to specific place types
 ): Promise<GooglePlaceResult[]> {
   const url = new URL('https://places.googleapis.com/v1/places:searchText');
   
-  const body = {
+  const body: any = {
     textQuery: query,
     locationBias: {
       circle: {
@@ -74,8 +76,13 @@ export async function searchPlaces(
         radius: radius,
       },
     },
-    maxResultCount: 50, // Increased for better coverage
+    maxResultCount: 50,
   };
+  
+  // Add includedTypes if provided (restricts to specific place types)
+  if (includedTypes && includedTypes.length > 0) {
+    body.includedTypes = includedTypes;
+  }
 
   // REQUIRED: Google Places API (New) requires X-Goog-FieldMask header
   // Without this header, the API will return an error or empty results
@@ -89,7 +96,7 @@ export async function searchPlaces(
     'places.userRatingCount',
     'places.nationalPhoneNumber',
     'places.websiteUri',
-    'places.types',
+    'places.types', // Include types for filtering
   ].join(',');
 
   const response = await fetch(url.toString(), {
@@ -234,5 +241,6 @@ export function convertGooglePlace(googlePlace: GooglePlaceResult, sport?: strin
     review_count: reviewCount,
     location: { lat, lng },
     sport,
+    types: googlePlace.types, // Include place types for filtering/scoring
   };
 }
