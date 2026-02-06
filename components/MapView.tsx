@@ -218,31 +218,31 @@ export default function MapView(props: MapViewProps) {
           let markerSize: number;
           let markerOpacity = '1';
           
-          // Luxury confidence tier colors
+          // Luxury confidence tier colors - BRIGHTER for visibility
           if (clubScore >= 80) {
             markerColor = '#fbbf24'; // Gold - Elite
-            markerSize = isSelected ? 20 : 14;
+            markerSize = isSelected ? 22 : 16;
           } else if (clubScore >= 60) {
             markerColor = '#10b981'; // Emerald - Premium
-            markerSize = isSelected ? 18 : 12;
+            markerSize = isSelected ? 20 : 14;
           } else if (clubScore >= 40) {
-            markerColor = '#64748b'; // Slate - Standard
-            markerSize = isSelected ? 16 : 10;
+            markerColor = '#94a3b8'; // Brighter slate - Standard (was #64748b)
+            markerSize = isSelected ? 18 : 12;
           } else {
-            markerColor = '#475569'; // Subdued slate - Basic
-            markerSize = isSelected ? 14 : 8;
-            markerOpacity = '0.6';
+            markerColor = '#64748b'; // Brighter slate - Basic (was #475569, was opacity 0.6)
+            markerSize = isSelected ? 16 : 10;
+            markerOpacity = '1'; // Full opacity - no dimming
           }
           
           el.style.width = `${markerSize}px`;
           el.style.height = `${markerSize}px`;
           el.style.backgroundColor = markerColor;
           el.style.opacity = markerOpacity;
-          el.style.zIndex = isSelected ? '1000' : '1';
-          el.style.border = isSelected ? '2px solid #fbbf24' : '1px solid rgba(255,255,255,0.15)';
+          el.style.zIndex = isSelected ? '1000' : '10'; // Higher z-index so markers stay visible
+          el.style.border = isSelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)'; // Brighter border
           el.style.boxShadow = isSelected 
             ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
-            : '0 2px 6px rgba(0,0,0,0.5)';
+            : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)'; // Brighter shadow with white glow
           el.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
         }
       } else {
@@ -252,20 +252,20 @@ export default function MapView(props: MapViewProps) {
         let markerSize: number;
         let markerOpacity = '1';
         
-        // Luxury confidence tier colors
+        // Luxury confidence tier colors - BRIGHTER for visibility
         if (clubScore >= 80) {
           markerColor = '#fbbf24'; // Gold - Elite
-          markerSize = isSelected ? 20 : 14;
+          markerSize = isSelected ? 22 : 16;
         } else if (clubScore >= 60) {
           markerColor = '#10b981'; // Emerald - Premium
-          markerSize = isSelected ? 18 : 12;
+          markerSize = isSelected ? 20 : 14;
         } else if (clubScore >= 40) {
-          markerColor = '#64748b'; // Slate - Standard
-          markerSize = isSelected ? 16 : 10;
+          markerColor = '#94a3b8'; // Brighter slate - Standard (was #64748b)
+          markerSize = isSelected ? 18 : 12;
         } else {
-          markerColor = '#475569'; // Subdued slate - Basic
-          markerSize = isSelected ? 14 : 8;
-          markerOpacity = '0.6';
+          markerColor = '#64748b'; // Brighter slate - Basic (was #475569, was opacity 0.6)
+          markerSize = isSelected ? 16 : 10;
+          markerOpacity = '1'; // Full opacity - no dimming
         }
         
         const el = document.createElement('div');
@@ -275,12 +275,14 @@ export default function MapView(props: MapViewProps) {
         el.style.borderRadius = '50%';
         el.style.backgroundColor = markerColor;
         el.style.opacity = markerOpacity;
-        el.style.border = isSelected ? '2px solid #fbbf24' : '1px solid rgba(255,255,255,0.15)';
+        el.style.zIndex = isSelected ? '1000' : '10'; // Higher z-index so markers stay visible
+        el.style.border = isSelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)'; // Brighter border
         el.style.boxShadow = isSelected 
           ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
-          : '0 2px 6px rgba(0,0,0,0.5)';
+          : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)'; // Brighter shadow with white glow
         el.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
         el.style.cursor = 'pointer';
+        el.style.pointerEvents = 'auto'; // Ensure pointer events work
 
         const marker = new mapboxgl.Marker(el)
           .setLngLat([place.location.lng, place.location.lat])
@@ -290,15 +292,19 @@ export default function MapView(props: MapViewProps) {
           onPlaceClickRef.current(place.place_id);
         });
         
-        // Hover behavior - luxury amber glow
+        // Hover behavior - luxury amber glow (FIXED: ensure opacity stays at 1)
         el.addEventListener('mouseenter', () => {
-          el.style.boxShadow = '0 0 0 2px rgba(251, 191, 36, 0.35), 0 4px 16px rgba(0,0,0,0.6), 0 0 32px rgba(251, 191, 36, 0.2)';
-          el.style.transform = 'scale(1.1)';
+          el.style.opacity = '1'; // Ensure full opacity on hover
+          el.style.zIndex = '100'; // Higher z-index on hover
+          el.style.boxShadow = '0 0 0 2px rgba(251, 191, 36, 0.5), 0 4px 16px rgba(0,0,0,0.7), 0 0 32px rgba(251, 191, 36, 0.3)';
+          el.style.transform = 'scale(1.15)'; // Slightly larger scale
         });
         el.addEventListener('mouseleave', () => {
+          el.style.opacity = markerOpacity; // Restore original opacity
+          el.style.zIndex = isSelected ? '1000' : '10'; // Restore z-index
           el.style.boxShadow = isSelected 
             ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
-            : '0 2px 6px rgba(0,0,0,0.5)';
+            : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)';
           el.style.transform = 'scale(1)';
         });
 
