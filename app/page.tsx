@@ -122,19 +122,20 @@ export default function Home() {
       if (!searchResponse.ok) {
         let errorMessage = 'Search failed';
         try {
-          const error = await searchResponse.json();
-          errorMessage = error.error || errorMessage;
-          console.error('Search API error:', error);
-        } catch (parseError) {
-          // If response isn't JSON, try to get text
+          // Read response as text first, then try to parse as JSON
+          const responseText = await searchResponse.text();
           try {
-            const errorText = await searchResponse.text();
-            console.error('Search API error (non-JSON):', errorText);
-            errorMessage = `Server error (${searchResponse.status}): ${errorText.substring(0, 100)}`;
-          } catch (textError) {
-            console.error('Search API error (could not parse):', textError);
-            errorMessage = `Server error (${searchResponse.status})`;
+            const error = JSON.parse(responseText);
+            errorMessage = error.error || errorMessage;
+            console.error('Search API error:', error);
+          } catch {
+            // Not JSON, use text as error message
+            console.error('Search API error (non-JSON):', responseText);
+            errorMessage = `Server error (${searchResponse.status}): ${responseText.substring(0, 100)}`;
           }
+        } catch (textError) {
+          console.error('Search API error (could not read):', textError);
+          errorMessage = `Server error (${searchResponse.status})`;
         }
         alert(`Search failed: ${errorMessage}`);
         setPlaces([]);
