@@ -3,6 +3,9 @@ import { auth } from '@clerk/nextjs/server';
 import { getUserUsage } from '@/lib/db';
 import { canUseAI, canSearch } from '@/lib/paywall';
 
+// Mark as dynamic since we use auth()
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/usage - Get current user's usage stats
  */

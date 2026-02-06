@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import Stripe from 'stripe';
 
+// Mark as dynamic since we use auth()
+export const dynamic = 'force-dynamic';
+
 // Lazy initialization - only create Stripe client when needed
 function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;

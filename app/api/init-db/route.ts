@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { initDatabase } from '@/lib/db';
 
+// Mark as dynamic since we use database
+export const dynamic = 'force-dynamic';
+
 /**
  * GET/POST /api/init-db - Initialize database schema
  * Run this once after setting up your database

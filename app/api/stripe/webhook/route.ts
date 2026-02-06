@@ -3,6 +3,9 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { updateUserPlan } from '@/lib/db';
 
+// Mark as dynamic since we use headers()
+export const dynamic = 'force-dynamic';
+
 // Lazy initialization - only create Stripe client when needed
 function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;

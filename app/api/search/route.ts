@@ -11,6 +11,9 @@ import { canUseAI } from '@/lib/paywall';
 import { auth } from '@clerk/nextjs/server';
 import { getUserUsage, incrementAIUsage, incrementSearchUsage } from '@/lib/db';
 
+// Mark as dynamic since we use auth()
+export const dynamic = 'force-dynamic';
+
 // FIXED: Expanded queries - rotate multiple queries per sport
 // Google Places (New) is stricter, need broader search terms
 const SPORT_KEYWORDS: Record<string, string[]> = {
