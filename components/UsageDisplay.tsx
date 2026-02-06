@@ -12,30 +12,8 @@ interface UsageData {
   isAuthenticated: boolean;
 }
 
-export default function UsageDisplay() {
-  // Check if Clerk is configured - must check before using hooks
-  if (typeof window === 'undefined') {
-    // Server-side: check env var
-    const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-    if (!publishableKey || publishableKey.trim() === '') {
-      return null;
-    }
-  }
-  
-  let isSignedIn = false;
-  let isLoaded = false;
-  let user = null;
-  
-  try {
-    const userData = useUser();
-    isSignedIn = userData.isSignedIn ?? false;
-    isLoaded = userData.isLoaded ?? false;
-    user = userData.user ?? null;
-  } catch (error) {
-    // Clerk not configured - return null
-    return null;
-  }
-  
+function UsageDisplayContent() {
+  const { user, isSignedIn, isLoaded } = useUser();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   
