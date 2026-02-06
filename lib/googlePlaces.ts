@@ -258,6 +258,17 @@ export function convertGooglePlace(googlePlace: GooglePlaceResult, sport?: strin
   } else {
     throw new Error('No location data in place result');
   }
+  
+  // Validate coordinates
+  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    console.error(`[convertGooglePlace] Invalid coordinates for place:`, {
+      name: googlePlace.displayName?.text || googlePlace.name,
+      lat,
+      lng,
+      googlePlace,
+    });
+    throw new Error(`Invalid coordinates: lat=${lat}, lng=${lng}`);
+  }
 
   return {
     place_id: placeId,

@@ -102,33 +102,59 @@ export default function MapView(props: MapViewProps) {
     });
 
     // Fix marker positions after zoom/pan to prevent drift
+    let fixTimeout: NodeJS.Timeout | null = null;
+    
     const fixMarkerPositions = () => {
       if (!map.current) return;
       
-      // Update all place markers - read from ref to get current values
-      markersRef.current.forEach((marker, placeId) => {
-        const place = placesRef.current.find(p => p.place_id === placeId);
-        if (place) {
-          // Force update position to prevent drift
-          marker.setLngLat([place.location.lng, place.location.lat]);
+      // Use requestAnimationFrame to ensure map has finished rendering
+      requestAnimationFrame(() => {
+        // Update all place markers - read from ref to get current values
+        markersRef.current.forEach((marker, placeId) => {
+          const place = placesRef.current.find(p => p.place_id === placeId);
+          if (place) {
+            // Get current marker position
+            const currentPos = marker.getLngLat();
+            const expectedLng = place.location.lng;
+            const expectedLat = place.location.lat;
+            
+            // Only update if position has drifted significantly (>1 meter)
+            const lngDiff = Math.abs(currentPos.lng - expectedLng);
+            const latDiff = Math.abs(currentPos.lat - expectedLat);
+            // ~0.00001 degrees ≈ 1 meter at equator
+            if (lngDiff > 0.00001 || latDiff > 0.00001) {
+              marker.setLngLat([expectedLng, expectedLat]);
+            }
+          }
+        });
+        
+        // Update origin marker
+        if (originMarkerRef.current && originRef.current) {
+          const currentPos = originMarkerRef.current.getLngLat();
+          const lngDiff = Math.abs(currentPos.lng - originRef.current.lng);
+          const latDiff = Math.abs(currentPos.lat - originRef.current.lat);
+          if (lngDiff > 0.00001 || latDiff > 0.00001) {
+            originMarkerRef.current.setLngLat([originRef.current.lng, originRef.current.lat]);
+          }
         }
       });
-      
-      // Update origin marker
-      if (originMarkerRef.current && originRef.current) {
-        originMarkerRef.current.setLngLat([originRef.current.lng, originRef.current.lat]);
-      }
     };
 
-    // Listen to map move events to fix marker positions
-    map.current.on('moveend', fixMarkerPositions);
-    map.current.on('zoomend', fixMarkerPositions);
+    // Listen to map move events to fix marker positions (debounced)
+    const debouncedFixPositions = () => {
+      if (fixTimeout) clearTimeout(fixTimeout);
+      fixTimeout = setTimeout(fixMarkerPositions, 100); // Debounce to avoid excessive updates
+    };
+    
+    map.current.on('moveend', debouncedFixPositions);
+    map.current.on('zoomend', debouncedFixPositions);
 
     return () => {
       if (map.current) {
         // Remove event listeners
-        map.current.off('moveend', fixMarkerPositions);
-        map.current.off('zoomend', fixMarkerPositions);
+        map.current.off('moveend', debouncedFixPositions);
+        map.current.off('zoomend', debouncedFixPositions);
+        if (fixTimeout) clearTimeout(fixTimeout);
         map.current.remove();
         map.current = null;
       }
@@ -334,17 +360,45 @@ export default function MapView(props: MapViewProps) {
         el.style.pointerEvents = 'auto';
         el.style.position = 'relative';
         el.style.zIndex = isSelected ? '1000' : '10';
+        // Ensure no transforms or offsets that could cause visual drift
+        el.style.margin = '0';
+        el.style.padding = '0';
+        el.style.transform = 'none';
+        el.style.left = '0';
+        el.style.top = '0';
 
         // Store state on element for hover handlers to read (prevents stale closure issues)
         el.setAttribute('data-original-opacity', markerOpacity);
         el.setAttribute('data-is-selected', isSelected ? 'true' : 'false');
 
+        // Validate coordinates before creating marker
+        if (isNaN(place.location.lng) || isNaN(place.location.lat) ||
+            place.location.lng < -180 || place.location.lng > 180 ||
+            place.location.lat < -90 || place.location.lat > 90) {
+          console.error(`[MapView] Invalid coordinates for ${place.name}:`, place.location);
+          return; // Skip invalid place
+        }
+        
         const marker = new mapboxgl.Marker({
           element: el,
           anchor: 'center', // Center anchor prevents shifting
         })
           .setLngLat([place.location.lng, place.location.lat])
           .addTo(map.current!);
+        
+        // Verify marker position matches place location immediately after creation
+        const markerLngLat = marker.getLngLat();
+        const lngDiff = Math.abs(markerLngLat.lng - place.location.lng);
+        const latDiff = Math.abs(markerLngLat.lat - place.location.lat);
+        if (lngDiff > 0.00001 || latDiff > 0.00001) {
+          console.warn(`[MapView] Marker position mismatch for ${place.name}:`, {
+            expected: [place.location.lng, place.location.lat],
+            actual: [markerLngLat.lng, markerLngLat.lat],
+            diff: [lngDiff, latDiff],
+          });
+          // Force correct position
+          marker.setLngLat([place.location.lng, place.location.lat]);
+        }
 
         // Click handler - stop propagation to prevent map interactions
         el.addEventListener('click', (e) => {
