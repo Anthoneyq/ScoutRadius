@@ -4,13 +4,16 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import MapView from '@/components/MapView';
 import ResultsTable from '@/components/ResultsTable';
 import Controls from '@/components/Controls';
-import UsageDisplay from '@/components/UsageDisplay';
-import AuthButton from '@/components/AuthButton';
 import { arrayToCSV, downloadCSV } from '@/lib/csv';
 import { Place } from '@/lib/googlePlaces';
+
+// Dynamically import Clerk-dependent components to avoid build errors
+const UsageDisplay = dynamic(() => import('@/components/UsageDisplay'), { ssr: false });
+const AuthButton = dynamic(() => import('@/components/AuthButton'), { ssr: false });
 
 const STORAGE_KEY_NOTES = 'scout-radius-notes';
 const STORAGE_KEY_TAGS = 'scout-radius-tags';
