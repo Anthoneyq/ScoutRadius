@@ -84,13 +84,30 @@ export default function ResultsTable(props: ResultsTableProps) {
 
   const filteredAndSorted = useMemo(() => {
     // Safety guard: ensure places is an array
-    if (!Array.isArray(places)) return [];
+    if (!Array.isArray(places)) {
+      console.warn("ResultsTable: places is not an array", places);
+      return [];
+    }
+    
+    console.log(`ResultsTable: Filtering ${places.length} places`, {
+      showRecreational,
+      onlyClubs,
+      selectedAgeGroups: selectedAgeGroups.length,
+      filterSport,
+      searchQuery
+    });
     
     let filtered = places.filter(place => {
       // Filter by "show recreational" toggle
-      // When OFF, hide recreational/uncertain places (clubScore < 2)
-      if (!showRecreational && (place.clubScore ?? 0) < 2) {
-        return false;
+      // When OFF, only hide places with negative scores (bars, restaurants) or very low scores (0)
+      // Keep places with score >= 1 to avoid filtering out legitimate venues
+      if (!showRecreational) {
+        const score = place.clubScore ?? 0;
+        // Only filter out truly recreational venues (score 0 or negative)
+        // Score 1+ indicates some club-like characteristics
+        if (score < 1) {
+          return false;
+        }
       }
       
       // Filter by age groups
@@ -119,6 +136,8 @@ export default function ResultsTable(props: ResultsTableProps) {
       }
       return true;
     });
+    
+    console.log(`ResultsTable: After filtering, ${filtered.length} places remain`);
     
     // Sort: When "Prioritize Clubs" is ON, clubs float to top
     // Otherwise: primary by clubScore (descending), secondary by drive time (ascending)
