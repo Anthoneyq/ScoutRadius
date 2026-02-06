@@ -92,9 +92,11 @@ export async function searchPlaces(
   if (!response.ok) {
     const errorText = await response.text();
     let errorMessage = `Google Places API error: ${errorText}`;
+    let errorDetails: any = {};
     try {
       const errorJson = JSON.parse(errorText);
       errorMessage = errorJson.error?.message || errorJson.error || errorMessage;
+      errorDetails = errorJson;
     } catch {
       // Use text as-is
     }
@@ -102,9 +104,11 @@ export async function searchPlaces(
       status: response.status,
       statusText: response.statusText,
       error: errorMessage,
+      errorDetails,
       query,
+      url: url.toString().substring(0, 100),
     });
-    throw new Error(errorMessage);
+    throw new Error(`Google Places API ${response.status}: ${errorMessage}`);
   }
 
   const data = await response.json();

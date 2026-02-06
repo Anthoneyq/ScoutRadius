@@ -190,6 +190,10 @@ export async function POST(request: NextRequest) {
           }
         } catch (keywordError) {
           console.error(`Search error for ${sport} keyword "${keyword}":`, keywordError);
+          console.error('Error details:', {
+            message: keywordError instanceof Error ? keywordError.message : String(keywordError),
+            stack: keywordError instanceof Error ? keywordError.stack : undefined,
+          });
           // Continue with other keywords
         }
       }
