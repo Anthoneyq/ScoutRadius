@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { searchPlaces, convertGooglePlace, deduplicatePlaces, getClubConfidence } from '@/lib/googlePlaces';
+import { searchPlaces, convertGooglePlace, deduplicatePlaces, getClubConfidence, getAgeGroupScores, getPrimaryAgeGroup } from '@/lib/googlePlaces';
 import { getDirections, metersToMiles, secondsToMinutes } from '@/lib/mapbox';
 import { Place } from '@/lib/googlePlaces';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
@@ -166,9 +166,15 @@ export async function POST(request: NextRequest) {
             try {
               const place = convertGooglePlace(googlePlace, sport);
               
-              // Calculate club confidence score
+              // Calculate club confidence score and isClub flag
               const clubScore = getClubConfidence(place);
               place.clubScore = clubScore;
+              place.isClub = clubScore >= 3;
+              
+              // Calculate age group scores
+              const ageGroups = getAgeGroupScores(place);
+              place.ageGroups = ageGroups;
+              place.primaryAgeGroup = getPrimaryAgeGroup(ageGroups);
               
               // Filter out obvious non-club venues by name (legacy exclusion filter)
               // Note: This is now redundant with scoring, but kept for backward compatibility

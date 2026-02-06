@@ -14,6 +14,14 @@ interface Place {
   driveTime?: number;
   distance?: number;
   clubScore?: number; // Club confidence score
+  isClub?: boolean; // True if clubScore >= 3
+  ageGroups?: {
+    youth: number;
+    highSchool: number;
+    adult: number;
+    elite: number;
+  };
+  primaryAgeGroup?: 'youth' | 'highSchool' | 'adult' | 'elite';
 }
 
 interface ResultsTableProps {
@@ -26,6 +34,7 @@ interface ResultsTableProps {
   onTagsChange: (placeId: string, tags: string) => void;
   onExport: () => void;
   onlyClubs: boolean; // Filter to only clubs when true
+  selectedAgeGroups: string[]; // Filter by age groups
 }
 
 type SortField = 'name' | 'sport' | 'driveTime' | 'distance' | 'rating' | 'review_count';
@@ -42,6 +51,7 @@ export default function ResultsTable(props: ResultsTableProps) {
     onTagsChange = () => {},
     onExport = () => {},
     onlyClubs = false,
+    selectedAgeGroups = [],
   } = props || {};
   const [sortField, setSortField] = useState<SortField>('driveTime');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -62,10 +72,17 @@ export default function ResultsTable(props: ResultsTableProps) {
     
     let filtered = places.filter(place => {
       // Filter by "only clubs" toggle
-      if (onlyClubs) {
-        // Only show places with clubScore >= 3 (likely clubs)
-        const score = place.clubScore ?? 0;
-        if (score < 3) {
+      if (onlyClubs && !place.isClub) {
+        return false;
+      }
+      
+      // Filter by age groups
+      if (selectedAgeGroups.length > 0 && place.ageGroups) {
+        const hasMatchingAgeGroup = selectedAgeGroups.some(ageGroupId => {
+          const score = place.ageGroups![ageGroupId as keyof typeof place.ageGroups];
+          return score >= 2; // Show if score >= 2
+        });
+        if (!hasMatchingAgeGroup) {
           return false;
         }
       }
@@ -86,7 +103,7 @@ export default function ResultsTable(props: ResultsTableProps) {
       return true;
     });
     
-    // Sort: primary by clubScore (descending), secondary by selected field
+    // Sort: primary by clubScore (descending), secondary by drive time (ascending), tertiary by selected field
     filtered.sort((a, b) => {
       // Primary sort: clubScore (highest confidence first)
       const scoreA = a.clubScore ?? 0;
@@ -95,7 +112,14 @@ export default function ResultsTable(props: ResultsTableProps) {
         return scoreB - scoreA; // Descending
       }
       
-      // Secondary sort: by selected field
+      // Secondary sort: drive time (closest first)
+      const driveTimeA = a.driveTime ?? Infinity;
+      const driveTimeB = b.driveTime ?? Infinity;
+      if (driveTimeA !== driveTimeB) {
+        return driveTimeA - driveTimeB; // Ascending
+      }
+      
+      // Tertiary sort: by selected field
       let aVal: any = a[sortField];
       let bVal: any = b[sortField];
 
@@ -115,7 +139,7 @@ export default function ResultsTable(props: ResultsTableProps) {
     });
 
     return filtered;
-  }, [places, sortField, sortDirection, filterSport, searchQuery, onlyClubs]);
+  }, [places, sortField, sortDirection, filterSport, searchQuery, onlyClubs, selectedAgeGroups]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -227,7 +251,40 @@ export default function ResultsTable(props: ResultsTableProps) {
                     selectedPlaceId === place.place_id ? 'bg-blue-100' : ''
                   }`}
                 >
-                  <td className="px-4 py-2 font-medium">{displayName}</td>
+                  <td className="px-4 py-2 font-medium">
+                    <div className="flex items-center gap-2">
+                      <span>{displayName}</span>
+                      {place.isClub && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          Club
+                        </span>
+                      )}
+                    </div>
+                    {place.ageGroups && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {place.ageGroups.youth >= 2 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
+                            🟢 Youth
+                          </span>
+                        )}
+                        {place.ageGroups.highSchool >= 2 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-800">
+                            🔵 High School
+                          </span>
+                        )}
+                        {place.ageGroups.elite >= 2 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-indigo-100 text-indigo-800">
+                            🟣 Elite
+                          </span>
+                        )}
+                        {place.ageGroups.adult >= 2 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-800">
+                            ⚪ Adult
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-2">
                     {(() => {
                       const score = place.clubScore ?? 0;

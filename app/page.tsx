@@ -19,6 +19,7 @@ export default function Home() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tags, setTags] = useState<Record<string, string>>({});
   const [onlyClubs, setOnlyClubs] = useState(false);
+  const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
   
   // Track if we're loading from localStorage to prevent save loops
   const isInitialLoadRef = useRef(true);
@@ -208,6 +209,8 @@ export default function Home() {
         isLoading={isLoading}
         onlyClubs={onlyClubs}
         onOnlyClubsChange={setOnlyClubs}
+        selectedAgeGroups={selectedAgeGroups}
+        onAgeGroupsChange={setSelectedAgeGroups}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -232,6 +235,7 @@ export default function Home() {
             onTagsChange={handleTagsChange}
             onExport={handleExport}
             onlyClubs={onlyClubs}
+            selectedAgeGroups={selectedAgeGroups}
           />
         </div>
       </div>

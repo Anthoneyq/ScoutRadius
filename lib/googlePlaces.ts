@@ -20,6 +20,14 @@ export interface Place {
   distance?: number;
   types?: string[]; // Place types from Google Places API
   clubScore?: number; // Club confidence score (0-10+)
+  isClub?: boolean; // True if clubScore >= 3
+  ageGroups?: {
+    youth: number;
+    highSchool: number;
+    adult: number;
+    elite: number;
+  };
+  primaryAgeGroup?: 'youth' | 'highSchool' | 'adult' | 'elite';
 }
 
 export interface GooglePlaceResult {
@@ -250,41 +258,122 @@ export function convertGooglePlace(googlePlace: GooglePlaceResult, sport?: strin
 /**
  * Calculate club confidence score for a place
  * Higher score = more likely to be a competitive club/team
- * Score ranges: ≥4 = Club, 2-3 = Possible, ≤1 = Venue
+ * Score ranges: ≥3 = Club, 1-2 = Possible, ≤0 = Venue
  */
 export function getClubConfidence(place: Place): number {
   let score = 0;
   const name = place.name.toLowerCase();
+  const websiteLower = (place.website || '').toLowerCase();
 
-  // Strong positive signals (club indicators)
-  if (name.match(/club|academy|elite|junior|youth|select|travel|competitive/i)) {
+  // Name-based signals (highest weight)
+  if (name.match(/club|juniors|academy|select|travel|volleyball club/i)) {
     score += 3;
   }
+  if (name.match(/bar|restaurant|grill|cantina|pub/i)) {
+    score -= 3; // Strong negative signal
+  }
+
+  // Place type-based signals
   if (place.types?.includes('sports_club')) {
-    score += 3;
+    score += 2;
   }
+  if (place.types?.includes('school')) {
+    score += 1;
+  }
+  if (place.types?.some(type => ['restaurant', 'bar', 'gym', 'fitness_center'].includes(type))) {
+    score -= 2;
+  }
+
+  // Website-based signals (if available)
   if (place.website) {
-    score += 2; // Clubs typically have websites
-  }
-
-  // Medium positive signals
-  if (place.review_count && place.review_count > 10) {
-    score += 1; // Established places have more reviews
-  }
-  if (place.rating && place.rating >= 4.0) {
-    score += 1; // Good ratings suggest quality organization
-  }
-
-  // Strong negative signals (venue indicators)
-  if (name.match(/bar|restaurant|grill|pub|cantina|brew|tavern/i)) {
-    score -= 4; // Definitely not a club
-  }
-  
-  // Medium negative signals
-  if (name.match(/gym|fitness|crossfit|equinox|lifetime|health club/i)) {
-    score -= 1; // May be a facility, not a team
+    score += 2; // Base score for having a website
+    if (websiteLower.match(/tryouts|teams|age groups|12u|14u|16u|18u/i)) {
+      score += 2; // Additional boost for club-specific content
+    }
   }
 
   // Ensure score doesn't go below 0
   return Math.max(0, score);
+}
+
+/**
+ * Calculate age group scores for a place
+ * Returns scores for each age group category
+ */
+export function getAgeGroupScores(place: Place): {
+  youth: number;
+  highSchool: number;
+  adult: number;
+  elite: number;
+} {
+  const scores = {
+    youth: 0,
+    highSchool: 0,
+    adult: 0,
+    elite: 0,
+  };
+
+  const name = place.name.toLowerCase();
+  const websiteLower = (place.website || '').toLowerCase();
+  const combinedText = `${name} ${websiteLower}`;
+
+  // Name keywords (each match = +3)
+  // Youth indicators
+  if (combinedText.match(/youth|junior|juniors|12u|13u|14u/i)) {
+    scores.youth += 3;
+  }
+
+  // High School indicators
+  if (combinedText.match(/15u|16u|17u|18u|varsity|high school/i)) {
+    scores.highSchool += 3;
+  }
+
+  // Adult indicators
+  if (combinedText.match(/adult|open|rec|recreation/i)) {
+    scores.adult += 3;
+  }
+
+  // Elite indicators
+  if (combinedText.match(/elite|academy|performance|college prep/i)) {
+    scores.elite += 3;
+  }
+
+  // Place type-based signals
+  if (place.types?.includes('school')) {
+    scores.highSchool += 2;
+  }
+  if (place.types?.includes('sports_club')) {
+    scores.youth += 1;
+    scores.elite += 1;
+  }
+  if (place.types?.some(type => ['bar', 'restaurant'].includes(type))) {
+    scores.adult += 2;
+  }
+
+  // Review heuristic (weak signal)
+  if (place.review_count && place.review_count > 50) {
+    scores.adult += 1; // Adult venues tend to have more reviews
+  }
+
+  return scores;
+}
+
+/**
+ * Get the primary age group based on scores
+ */
+export function getPrimaryAgeGroup(ageGroups: {
+  youth: number;
+  highSchool: number;
+  adult: number;
+  elite: number;
+}): 'youth' | 'highSchool' | 'adult' | 'elite' | undefined {
+  const entries = Object.entries(ageGroups) as Array<['youth' | 'highSchool' | 'adult' | 'elite', number]>;
+  const sorted = entries.sort((a, b) => b[1] - a[1]);
+  
+  // Return primary age group if score >= 2, otherwise undefined
+  if (sorted[0][1] >= 2) {
+    return sorted[0][0];
+  }
+  
+  return undefined;
 }

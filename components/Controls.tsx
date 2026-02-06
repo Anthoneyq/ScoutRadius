@@ -7,6 +7,8 @@ interface ControlsProps {
   isLoading: boolean;
   onlyClubs: boolean;
   onOnlyClubsChange: (onlyClubs: boolean) => void;
+  selectedAgeGroups: string[];
+  onAgeGroupsChange: (ageGroups: string[]) => void;
 }
 
 const SPORTS = [
@@ -16,17 +18,27 @@ const SPORTS = [
   { id: 'softball', label: 'Softball' },
 ];
 
+const AGE_GROUPS = [
+  { id: 'youth', label: 'Youth' },
+  { id: 'highSchool', label: 'High School' },
+  { id: 'elite', label: 'Elite' },
+  { id: 'adult', label: 'Adult' },
+];
+
 export default function Controls(props: ControlsProps) {
   const {
     onSearch = () => {},
     isLoading = false,
     onlyClubs = false,
     onOnlyClubsChange = () => {},
+    selectedAgeGroups = [],
+    onAgeGroupsChange = () => {},
   } = props || {};
   const [locationInput, setLocationInput] = useState('');
   const [driveTime, setDriveTime] = useState(30); // Default to 30 minutes
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [showSportsDropdown, setShowSportsDropdown] = useState(false);
+  const [showAgeGroupsDropdown, setShowAgeGroupsDropdown] = useState(false);
 
   const toggleSport = (sportId: string) => {
     setSelectedSports(prev =>
@@ -42,6 +54,22 @@ export default function Controls(props: ControlsProps) {
       return SPORTS.find(s => s.id === selectedSports[0])?.label || selectedSports[0];
     }
     return `${selectedSports.length} sports selected`;
+  };
+
+  const getAgeGroupsDisplayText = () => {
+    if (selectedAgeGroups.length === 0) return 'All age groups';
+    if (selectedAgeGroups.length === 1) {
+      return AGE_GROUPS.find(a => a.id === selectedAgeGroups[0])?.label || selectedAgeGroups[0];
+    }
+    return `${selectedAgeGroups.length} age groups`;
+  };
+
+  const toggleAgeGroup = (ageGroupId: string) => {
+    onAgeGroupsChange(
+      selectedAgeGroups.includes(ageGroupId)
+        ? selectedAgeGroups.filter(id => id !== ageGroupId)
+        : [...selectedAgeGroups, ageGroupId]
+    );
   };
 
   const handleSearch = async () => {
@@ -193,24 +221,78 @@ export default function Controls(props: ControlsProps) {
           )}
         </div>
 
-        <div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={onlyClubs}
-              onChange={(e) => onOnlyClubsChange(e.target.checked)}
+        <div className="space-y-3">
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={onlyClubs}
+                onChange={(e) => onOnlyClubsChange(e.target.checked)}
+                disabled={isLoading}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Only clubs / teams
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1 ml-6">
+              {onlyClubs 
+                ? 'Showing only competitive clubs and teams' 
+                : 'Showing all venues, ranked by club confidence'}
+            </p>
+          </div>
+
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Age Groups
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowAgeGroupsDropdown(!showAgeGroupsDropdown)}
               disabled={isLoading}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              Only clubs / teams
-            </span>
-          </label>
-          <p className="text-xs text-gray-500 mt-1 ml-6">
-            {onlyClubs 
-              ? 'Showing only competitive clubs and teams' 
-              : 'Showing all venues, ranked by club confidence'}
-          </p>
+              className="w-full px-4 py-2 border rounded-md text-left bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between disabled:bg-gray-50 disabled:cursor-not-allowed"
+            >
+              <span className={selectedAgeGroups.length === 0 ? 'text-gray-500' : ''}>
+                {getAgeGroupsDisplayText()}
+              </span>
+              <svg
+                className={`w-4 h-4 transition-transform ${showAgeGroupsDropdown ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {showAgeGroupsDropdown && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowAgeGroupsDropdown(false)}
+                />
+                <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  <div className="p-2 space-y-1">
+                    {AGE_GROUPS.map((ageGroup) => (
+                      <label
+                        key={ageGroup.id}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedAgeGroups.includes(ageGroup.id)}
+                          onChange={() => toggleAgeGroup(ageGroup.id)}
+                          disabled={isLoading}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">{ageGroup.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <button
