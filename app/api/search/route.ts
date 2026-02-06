@@ -77,21 +77,38 @@ const EXCLUDED_KEYWORDS = [
 ];
 
 export async function POST(request: NextRequest) {
-  // Get user ID from Clerk auth
-  const { userId } = await auth();
-  
-  // Fetch user usage from database (or null if not authenticated)
-  const userUsage = userId ? await getUserUsage(userId) : null;
-  
-  // Increment search usage if authenticated
-  if (userId) {
-    try {
-      await incrementSearchUsage(userId);
-    } catch (error) {
-      console.error('[Search] Error incrementing search usage:', error);
-    }
-  }
   try {
+    // Get user ID from Clerk auth (may fail if Clerk not configured)
+    let userId: string | null = null;
+    let userUsage = null;
+    
+    try {
+      const authResult = await auth();
+      userId = authResult.userId || null;
+      
+      // Fetch user usage from database (or null if not authenticated)
+      if (userId) {
+        try {
+          userUsage = await getUserUsage(userId);
+        } catch (dbError) {
+          console.error('[Search] Error fetching user usage (non-blocking):', dbError);
+          // Continue without usage tracking
+        }
+        
+        // Increment search usage if authenticated
+        try {
+          await incrementSearchUsage(userId);
+        } catch (usageError) {
+          console.error('[Search] Error incrementing search usage (non-blocking):', usageError);
+          // Continue without usage tracking
+        }
+      }
+    } catch (authError) {
+      // Clerk not configured or auth failed - continue as anonymous user
+      console.debug('[Search] Auth not available (continuing as anonymous):', authError);
+    }
+    
+    // Main search logic
     let body;
     try {
       body = await request.json();
@@ -632,16 +649,33 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`Search API failed: ${errorMessage}`);
-    return NextResponse.json(
-      { 
-        error: 'Search failed',
-        places: [],
-        debug: {
-          error: errorMessage,
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error(`Search API failed: ${errorMessage}`, errorStack);
+    console.error('Full error object:', error);
+    
+    // Ensure we always return valid JSON, even if something goes wrong
+    try {
+      return NextResponse.json(
+        { 
+          error: 'Search failed',
+          places: [],
+          debug: {
+            error: errorMessage,
+            stack: errorStack,
+          }
+        },
+        { status: 500 }
+      );
+    } catch (jsonError) {
+      // If even JSON.stringify fails, return a plain text response
+      console.error('Failed to create JSON error response:', jsonError);
+      return new NextResponse(
+        JSON.stringify({ error: 'Search failed', places: [] }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
         }
-      },
-      { status: 500 }
-    );
+      );
+    }
   }
 }
