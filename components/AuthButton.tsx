@@ -3,7 +3,12 @@
 import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
 
 export default function AuthButton() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, isLoaded } = useUser();
+  
+  // Handle case where Clerk isn't configured
+  if (!isLoaded) {
+    return null;
+  }
 
   if (isSignedIn) {
     return (

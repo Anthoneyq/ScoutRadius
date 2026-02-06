@@ -13,9 +13,14 @@ interface UsageData {
 }
 
 export default function UsageDisplay() {
-  const { user, isSignedIn } = useUser();
+  const { user, isSignedIn, isLoaded } = useUser();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Handle case where Clerk isn't configured
+  if (!isLoaded) {
+    return null;
+  }
 
   useEffect(() => {
     fetchUsage();
