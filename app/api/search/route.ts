@@ -3,7 +3,7 @@ import { searchPlaces, getPlaceDetails, convertGooglePlace, deduplicatePlaces } 
 import { getDirections, metersToMiles, secondsToMinutes } from '@/lib/mapbox';
 import { Place } from '@/lib/googlePlaces';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
-import { point, Feature, Polygon } from '@turf/helpers';
+import { point } from '@turf/helpers';
 
 // Expanded keywords for better discovery
 const SPORT_KEYWORDS: Record<string, string[]> = {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     const radiusMeters = Math.min(driveTimeMinutes * 1000, 50000); // Max 50km
 
     // Extract polygon from isochrone GeoJSON for filtering
-    let isochronePolygon: Feature<Polygon> | null = null;
+    let isochronePolygon: any = null;
     if (isochroneGeoJSON && isochroneGeoJSON.features && isochroneGeoJSON.features.length > 0) {
       // Find the largest polygon (usually the main isochrone)
       const polygons = isochroneGeoJSON.features.filter(
