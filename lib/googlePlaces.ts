@@ -344,6 +344,10 @@ export function getClubConfidence(place: Place): number {
     } else if (ai.label === "private") {
       score -= 50; // Strong negative signal
       place.confidenceSignals.push(`AI: private (${Math.round(ai.confidence * 100)}%)`);
+    } else if (ai.label === "retail") {
+      // Retail stores should be hard-excluded, but if AI catches one, zero the score
+      score = 0;
+      place.confidenceSignals.push(`AI: retail (${Math.round(ai.confidence * 100)}%) - retail sporting goods store`);
     }
     // "unknown" classification doesn't affect score
   }

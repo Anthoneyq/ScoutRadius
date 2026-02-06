@@ -6,6 +6,7 @@ import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import { queryOSMSportsFacilities, matchPlaceToOSM } from '@/lib/osmLookup';
 import { classifyPlaceWithAI } from '@/lib/aiClassifier';
+import { isRetailSportStore } from '@/lib/retailExclusions';
 
 // FIXED: Expanded queries - rotate multiple queries per sport
 // Google Places (New) is stricter, need broader search terms
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
     let totalResultsFound = 0;
     let totalResultsAfterPolygonFilter = 0;
     let totalResultsAfterDriveTimeFilter = 0;
+    let retailExcludedCount = 0; // Track retail store exclusions
     
     // Log search parameters for debugging
     console.log(`Search: origin=[${origin.lng}, ${origin.lat}], driveTime=${driveTimeMinutes}min, radius=${radiusMeters}m, sports=[${sports.join(', ')}]`);
@@ -185,6 +187,19 @@ export async function POST(request: NextRequest) {
           for (const googlePlace of results) {
             try {
               const place = convertGooglePlace(googlePlace, sport);
+              
+              // HARD EXCLUSION: Retail sporting goods stores
+              // These are not ambiguous - they should never appear as clubs
+              // Check before any scoring or processing
+              if (isRetailSportStore({
+                name: place.name,
+                displayName: googlePlace.displayName,
+                website: place.website,
+              })) {
+                retailExcludedCount++;
+                console.log(`[Retail exclusion] Excluding "${place.name}" - retail sporting goods store`);
+                continue; // Hard stop - do not include
+              }
               
               // External intelligence signal 1: OSM validation
               // Check if place matches an OSM sports facility (within 200m)
@@ -353,6 +368,17 @@ export async function POST(request: NextRequest) {
           try {
             const place = convertGooglePlace(googlePlace, firstSport);
             
+            // HARD EXCLUSION: Retail sporting goods stores (also in fallback)
+            if (isRetailSportStore({
+              name: place.name,
+              displayName: googlePlace.displayName,
+              website: place.website,
+            })) {
+              retailExcludedCount++;
+              console.log(`[Retail exclusion] Excluding fallback "${place.name}" - retail sporting goods store`);
+              continue; // Hard stop - do not include
+            }
+            
             // External intelligence signal 1: OSM validation
             if (osmFacilities.length > 0) {
               place.osmConfirmed = matchPlaceToOSM(
@@ -423,7 +449,7 @@ export async function POST(request: NextRequest) {
     const uniqueRawPlaces = deduplicatePlaces(rawPlacesBeforeFiltering);
     
     // Log search pipeline results
-    console.log(`Search pipeline: raw=${uniqueRawPlaces.length}, afterPolygon=${totalResultsAfterPolygonFilter}, afterDriveTime=${totalResultsAfterDriveTimeFilter}, final=${uniquePlaces.length}`);
+    console.log(`Search pipeline: raw=${uniqueRawPlaces.length}, afterPolygon=${totalResultsAfterPolygonFilter}, afterDriveTime=${totalResultsAfterDriveTimeFilter}, retail excluded=${retailExcludedCount}, final=${uniquePlaces.length}`);
     
     // Calculate external intelligence signal counts (for logging and response)
     const osmConfirmedCount = uniquePlaces.filter(p => p.osmConfirmed).length;
@@ -432,7 +458,7 @@ export async function POST(request: NextRequest) {
       ? uniquePlaces.reduce((sum, p) => sum + (p.clubScore ?? 0), 0) / uniquePlaces.length
       : 0;
     
-    console.log(`External intelligence: OSM confirmed=${osmConfirmedCount}, AI classified=${aiClassifiedCount}, avg confidence=${avgConfidenceScore.toFixed(1)}`);
+    console.log(`External intelligence: OSM confirmed=${osmConfirmedCount}, AI classified=${aiClassifiedCount}, retail excluded=${retailExcludedCount}, avg confidence=${avgConfidenceScore.toFixed(1)}`);
     
     // If we found places but filtering removed them all, return raw results for debugging
     // This helps identify if the issue is with filtering logic vs API calls
@@ -547,6 +573,7 @@ export async function POST(request: NextRequest) {
         rawPlacesCount: uniqueRawPlaces.length,
         totalResultsAfterPolygonFilter,
         totalResultsAfterDriveTimeFilter,
+        retailExcludedCount, // Retail sporting goods stores excluded
         uniquePlacesCount: uniquePlaces.length,
         hasIsochrone: !!isochronePolygon,
         // External intelligence signals

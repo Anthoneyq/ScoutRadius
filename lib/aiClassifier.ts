@@ -5,7 +5,7 @@
  */
 
 export type AIClassificationResult = {
-  classification: "competitive_club" | "recreational" | "private" | "unknown";
+  classification: "competitive_club" | "recreational" | "private" | "retail" | "unknown";
   confidence: number;
 };
 
@@ -50,13 +50,17 @@ Determine whether this place is:
 1) competitive_club - Competitive youth / travel sports club
 2) recreational - Recreational facility (gym, rec center, park)
 3) private - Private residence / unrelated
-4) unknown - Cannot determine
+4) retail - Retail sporting goods store (Academy Sports, Dick's Sporting Goods, REI, Scheels, etc.)
+5) unknown - Cannot determine
+
+IMPORTANT: If the place is a retail sporting goods store (Academy, Dick's, REI, Scheels, Big 5, Sportsman's Warehouse, Bass Pro, Cabela's, Fleet Feet, Foot Locker, etc.),
+classify it as "retail" with high confidence.
 
 Use the name, website description, and reviews.
 
 Return JSON ONLY:
 {
-  "classification": "competitive_club" | "recreational" | "private" | "unknown",
+  "classification": "competitive_club" | "recreational" | "private" | "retail" | "unknown",
   "confidence": 0.0-1.0
 }
 
@@ -105,7 +109,7 @@ ${context}`;
       const result = JSON.parse(content.trim());
       
       // Validate classification
-      const validClassifications = ["competitive_club", "recreational", "private", "unknown"];
+      const validClassifications = ["competitive_club", "recreational", "private", "retail", "unknown"];
       if (!validClassifications.includes(result.classification)) {
         console.warn(`[AI Classifier] Invalid classification: ${result.classification}`);
         return null;
