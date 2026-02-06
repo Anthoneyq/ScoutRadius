@@ -59,7 +59,17 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey || apiKey === 'your_google_maps_api_key_here') {
+    
+    // TEMPORARY DEBUG: Verify env var is loaded
+    console.log('=== ENV VAR DEBUG ===');
+    console.log('GOOGLE_MAPS_API_KEY exists:', !!apiKey);
+    console.log('GOOGLE_MAPS_API_KEY length:', apiKey?.length || 0);
+    console.log('GOOGLE_MAPS_API_KEY starts with:', apiKey?.substring(0, 10) || 'undefined');
+    console.log('GOOGLE_MAPS_API_KEY is placeholder:', apiKey === 'your_google_maps_api_key_here' || apiKey === 'AIzaSyYOUR_REAL_KEY');
+    console.log('All env vars:', Object.keys(process.env).filter(k => k.includes('GOOGLE') || k.includes('MAPBOX')));
+    console.log('===================');
+    
+    if (!apiKey || apiKey === 'your_google_maps_api_key_here' || apiKey === 'AIzaSyYOUR_REAL_KEY') {
       return NextResponse.json(
         { 
           error: 'GOOGLE_MAPS_API_KEY not configured. Please add your Google Maps API key to .env.local',
