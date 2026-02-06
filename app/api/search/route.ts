@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { searchPlaces, getPlaceDetails, convertGooglePlace, deduplicatePlaces } from '@/lib/googlePlaces';
+import { searchPlaces, convertGooglePlace, deduplicatePlaces } from '@/lib/googlePlaces';
 import { getDirections, metersToMiles, secondsToMinutes } from '@/lib/mapbox';
 import { Place } from '@/lib/googlePlaces';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
@@ -59,20 +59,11 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    
-    // TEMPORARY DEBUG: Verify env var is loaded
-    console.log('=== ENV VAR DEBUG ===');
-    console.log('GOOGLE_MAPS_API_KEY exists:', !!apiKey);
-    console.log('GOOGLE_MAPS_API_KEY length:', apiKey?.length || 0);
-    console.log('GOOGLE_MAPS_API_KEY starts with:', apiKey?.substring(0, 10) || 'undefined');
-    console.log('GOOGLE_MAPS_API_KEY is placeholder:', apiKey === 'your_google_maps_api_key_here' || apiKey === 'AIzaSyYOUR_REAL_KEY');
-    console.log('All env vars:', Object.keys(process.env).filter(k => k.includes('GOOGLE') || k.includes('MAPBOX')));
-    console.log('===================');
-    
     if (!apiKey || apiKey === 'your_google_maps_api_key_here' || apiKey === 'AIzaSyYOUR_REAL_KEY') {
+      console.error('GOOGLE_MAPS_API_KEY not configured');
       return NextResponse.json(
         { 
-          error: 'GOOGLE_MAPS_API_KEY not configured. Please add your Google Maps API key to .env.local',
+          error: 'GOOGLE_MAPS_API_KEY not configured',
           places: []
         },
         { status: 500 }
@@ -92,6 +83,7 @@ export async function POST(request: NextRequest) {
     const radiusMeters = Math.min(driveTimeMinutes * 1000, 50000); // Max 50km
 
     // Extract polygon from isochrone GeoJSON for filtering
+    // Mapbox Isochrone API returns GeoJSON with coordinates as [lng, lat] arrays
     let isochronePolygon: any = null;
     if (isochroneGeoJSON && isochroneGeoJSON.features && isochroneGeoJSON.features.length > 0) {
       // Find the largest polygon (usually the main isochrone)
@@ -99,7 +91,7 @@ export async function POST(request: NextRequest) {
         (f: any) => f.geometry && f.geometry.type === 'Polygon'
       );
       if (polygons.length > 0) {
-        // Sort by area (rough estimate) and take the largest
+        // Sort by coordinate count (rough estimate of area) and take the largest
         isochronePolygon = polygons.reduce((largest: any, current: any) => {
           const largestCoords = largest.geometry.coordinates[0];
           const currentCoords = current.geometry.coordinates[0];
@@ -107,6 +99,11 @@ export async function POST(request: NextRequest) {
           const currentArea = currentCoords.length;
           return currentArea > largestArea ? current : largest;
         });
+        
+        // Verify polygon coordinate format: Mapbox Isochrone API returns [lng, lat] format
+        // This matches GeoJSON standard and Turf.js expectations
+        const firstCoord = isochronePolygon.geometry.coordinates[0][0];
+        console.log(`Isochrone polygon: ${isochronePolygon.geometry.coordinates[0].length} coordinates, first=[${firstCoord[0]}, ${firstCoord[1]}]`);
       }
     }
 
@@ -117,12 +114,8 @@ export async function POST(request: NextRequest) {
     let totalResultsAfterPolygonFilter = 0;
     let totalResultsAfterDriveTimeFilter = 0;
     
-    console.log(`=== STARTING SEARCH ===`);
-    console.log(`Origin: [${origin.lng}, ${origin.lat}]`);
-    console.log(`Drive time: ${driveTimeMinutes} minutes`);
-    console.log(`Radius: ${radiusMeters} meters`);
-    console.log(`Sports: ${sports.join(', ')}`);
-    console.log(`Has isochrone: ${!!isochroneGeoJSON}`);
+    // Log search parameters for debugging
+    console.log(`Search: origin=[${origin.lng}, ${origin.lat}], driveTime=${driveTimeMinutes}min, radius=${radiusMeters}m, sports=[${sports.join(', ')}]`);
     
     for (const sport of sports) {
       const keywords = SPORT_KEYWORDS[sport.toLowerCase()] || [`${sport} club`];
@@ -130,7 +123,6 @@ export async function POST(request: NextRequest) {
       // Search with each keyword
       for (const keyword of keywords) {
         try {
-          console.log(`Searching for "${sport}" with keyword "${keyword}"`);
           const results = await searchPlaces(
             keyword,
             { lat: origin.lat, lng: origin.lng },
@@ -139,14 +131,8 @@ export async function POST(request: NextRequest) {
           );
 
           totalResultsFound += results.length;
-          console.log(`Found ${results.length} results for "${keyword}" (sport: ${sport})`);
           if (results.length > 0) {
-            const firstResult = results[0];
-            console.log(`First result: ${firstResult?.displayName || firstResult?.name || 'unknown'}`);
-            console.log(`First result location:`, {
-              geometry: firstResult?.geometry,
-              location: firstResult?.location,
-            });
+            console.log(`Found ${results.length} results for "${keyword}"`);
           }
 
           // Convert and filter results
@@ -157,68 +143,76 @@ export async function POST(request: NextRequest) {
               // Collect raw place for debugging
               rawPlacesBeforeFiltering.push(place);
               
-              // TEMPORARY DEBUG: Log raw place before filtering
-              console.log(`Raw place: ${place.name} at [${place.location.lng}, ${place.location.lat}]`);
-              
               // Filter by isochrone polygon if available
               if (isochronePolygon) {
-                // CRITICAL: Turf.js expects [lng, lat] order
+                // CRITICAL: Turf.js booleanPointInPolygon expects [lng, lat] order
+                // Mapbox isochrone polygon coordinates are [lng, lat]
+                // Google Places location is {lat, lng}, so we convert to [lng, lat]
                 const placePoint = point([place.location.lng, place.location.lat]);
                 const isInside = booleanPointInPolygon(placePoint, isochronePolygon);
                 
-                console.log(`Place ${place.name}: polygon check = ${isInside}`);
-                
                 if (!isInside) {
-                  console.log(`Skipping ${place.name} - outside polygon`);
-                  continue; // Skip places outside the isochrone
+                  continue; // Skip places outside the isochrone polygon
                 }
                 totalResultsAfterPolygonFilter++;
-                console.log(`Place ${place.name} passed polygon filter`);
               }
               
-              // Calculate drive time and distance
+              // Calculate drive time and distance using Mapbox Directions API
+              // This provides exact routing data, not just straight-line distance
               try {
+                // Mapbox Directions API expects [lng, lat] format
                 const directions = await getDirections(
-                  [origin.lng, origin.lat],
-                  [place.location.lng, place.location.lat],
+                  [origin.lng, origin.lat], // [lng, lat]
+                  [place.location.lng, place.location.lat], // [lng, lat]
                   mapboxToken
                 );
 
                 if (directions.routes && directions.routes.length > 0) {
                   const route = directions.routes[0];
-                  const driveTime = secondsToMinutes(route.duration);
-                  const distance = metersToMiles(route.distance);
+                  // route.duration is in seconds, route.distance is in meters
+                  const calculatedDriveTimeMinutes = Math.round(route.duration / 60);
+                  const distanceMiles = metersToMiles(route.distance);
 
-                  // Double-check drive time (isochrone should handle this, but verify)
-                  if (driveTime <= driveTimeMinutes) {
-                    (place as any).driveTime = driveTime;
-                    (place as any).distance = distance;
+                  // Verify drive time is within limit (isochrone polygon should already filter this)
+                  // Add small buffer (1 minute) to account for routing variations
+                  if (calculatedDriveTimeMinutes <= driveTimeMinutes + 1) {
+                    place.driveTime = calculatedDriveTimeMinutes;
+                    place.distance = distanceMiles;
                     allPlaces.push(place);
                     totalResultsAfterDriveTimeFilter++;
+                  } else {
+                    // Drive time exceeds limit, skip this place
+                    continue;
                   }
+                } else {
+                  // No route found - skip this place
+                  continue;
                 }
               } catch (dirError) {
-                console.error(`Directions error for ${place.place_id}:`, dirError);
-                // If we have isochrone filtering, include without drive time
-                // Otherwise skip (we need at least one validation)
+                const errorMessage = dirError instanceof Error ? dirError.message : String(dirError);
+                console.error(`Directions API failed for "${place.name}": ${errorMessage}`);
+                // If polygon filtering passed, include place without drive time data
+                // This handles cases where Directions API fails but place is within polygon
                 if (isochronePolygon) {
-                  (place as any).driveTime = null;
-                  (place as any).distance = null;
+                  place.driveTime = undefined;
+                  place.distance = undefined;
                   allPlaces.push(place);
+                } else {
+                  // Without polygon filtering, we need directions to validate drive time
+                  // Skip this place if directions fail
+                  continue;
                 }
               }
             } catch (convertError) {
-              console.error(`Error converting place:`, convertError);
-              // Skip this place
+              const errorMessage = convertError instanceof Error ? convertError.message : String(convertError);
+              console.error(`Failed to convert place result: ${errorMessage}`);
+              // Skip this place and continue with others
             }
           }
         } catch (keywordError) {
-          console.error(`Search error for ${sport} keyword "${keyword}":`, keywordError);
-          console.error('Error details:', {
-            message: keywordError instanceof Error ? keywordError.message : String(keywordError),
-            stack: keywordError instanceof Error ? keywordError.stack : undefined,
-          });
-          // Continue with other keywords
+          const errorMessage = keywordError instanceof Error ? keywordError.message : String(keywordError);
+          console.error(`Search failed for "${sport}" keyword "${keyword}": ${errorMessage}`);
+          // Continue with other keywords - one failure shouldn't stop the entire search
         }
       }
     }
@@ -227,37 +221,34 @@ export async function POST(request: NextRequest) {
     const uniquePlaces = deduplicatePlaces(allPlaces);
 
     const uniqueRawPlaces = deduplicatePlaces(rawPlacesBeforeFiltering);
-    console.log(`=== RAW PLACES COUNT (BEFORE ANY FILTERING): ${uniqueRawPlaces.length} ===`);
     
-    console.log(`=== SEARCH SUMMARY ===`);
-    console.log(`Total results from Google: ${totalResultsFound}`);
-    console.log(`Raw places (before filtering): ${uniqueRawPlaces.length}`);
-    console.log(`After polygon filter: ${totalResultsAfterPolygonFilter}`);
-    console.log(`After drive time filter: ${totalResultsAfterDriveTimeFilter}`);
-    console.log(`Final unique places: ${uniquePlaces.length}`);
-    console.log(`Has isochrone polygon: ${!!isochronePolygon}`);
-    if (isochronePolygon) {
-      const polygonCoords = isochronePolygon.geometry.coordinates[0];
-      console.log(`Polygon first coord: [${polygonCoords[0][0]}, ${polygonCoords[0][1]}]`);
-      console.log(`Polygon coord count: ${polygonCoords.length}`);
-      console.log(`Origin: [${origin.lng}, ${origin.lat}]`);
-    }
-    console.log(`====================`);
-
-    // TEMPORARY: Return raw results if filtering removed everything
-    // This will show if Google Places is working but filtering is the issue
+    // Log search pipeline results
+    console.log(`Search pipeline: raw=${uniqueRawPlaces.length}, afterPolygon=${totalResultsAfterPolygonFilter}, afterDriveTime=${totalResultsAfterDriveTimeFilter}, final=${uniquePlaces.length}`);
+    
+    // If we found places but filtering removed them all, return raw results for debugging
+    // This helps identify if the issue is with filtering logic vs API calls
     if (uniqueRawPlaces.length > 0 && uniquePlaces.length === 0) {
-      console.log('⚠️ WARNING: Found places but all filtered out. Returning first 5 raw places for debugging.');
-      const rawPlacesForTesting = uniqueRawPlaces.slice(0, 5);
+      console.warn(`All ${uniqueRawPlaces.length} places filtered out. Returning first 5 raw places for debugging.`);
+      if (isochronePolygon) {
+        const polygonCoords = isochronePolygon.geometry.coordinates[0];
+        console.warn(`Polygon first coord: [${polygonCoords[0][0]}, ${polygonCoords[0][1]}], origin: [${origin.lng}, ${origin.lat}]`);
+      }
       return NextResponse.json({ 
-        places: rawPlacesForTesting, 
+        places: uniqueRawPlaces.slice(0, 5), 
         debug: { 
           bypassedFiltering: true,
-          totalResultsFound: uniqueRawPlaces.length,
-          message: 'Returning raw results - filtering removed all places',
+          message: 'Filtering removed all places - returning raw results for debugging',
           rawPlacesCount: uniqueRawPlaces.length,
+          totalResultsFound,
+          totalResultsAfterPolygonFilter,
+          totalResultsAfterDriveTimeFilter,
         } 
       });
+    }
+    
+    // If no places found at all, provide helpful error message
+    if (uniquePlaces.length === 0 && uniqueRawPlaces.length === 0) {
+      console.warn(`No places found for search: ${sports.join(', ')} near [${origin.lat}, ${origin.lng}]`);
     }
 
     return NextResponse.json({ 
@@ -272,9 +263,16 @@ export async function POST(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Search API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`Search API failed: ${errorMessage}`);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to search places' },
+      { 
+        error: 'Search failed',
+        places: [],
+        debug: {
+          error: errorMessage,
+        }
+      },
       { status: 500 }
     );
   }

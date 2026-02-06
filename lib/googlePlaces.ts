@@ -73,18 +73,27 @@ export async function searchPlaces(
     maxResultCount: 50, // Increased for better coverage
   };
 
-  console.log('Google Places API request:', {
-    query,
-    location: { lat: location.lat, lng: location.lng },
-    radius: radius,
-    url: url.toString().substring(0, 50) + '...',
-  });
+  // REQUIRED: Google Places API (New) requires X-Goog-FieldMask header
+  // Without this header, the API will return an error or empty results
+  // Specify which fields to return - this is mandatory, not optional
+  const fieldMask = [
+    'places.id',
+    'places.displayName',
+    'places.formattedAddress',
+    'places.location',
+    'places.rating',
+    'places.userRatingCount',
+    'places.nationalPhoneNumber',
+    'places.websiteUri',
+    'places.types',
+  ].join(',');
 
   const response = await fetch(url.toString(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': fieldMask, // REQUIRED for Places API (New)
     },
     body: JSON.stringify(body),
   });
@@ -112,20 +121,16 @@ export async function searchPlaces(
   }
 
   const data = await response.json();
-  console.log('Google Places API response:', {
-    query,
-    hasPlaces: !!data.places,
-    placesCount: Array.isArray(data.places) ? data.places.length : 0,
-    dataKeys: Object.keys(data),
-    firstPlaceName: data.places?.[0]?.displayName || data.places?.[0]?.name || 'none',
-  });
   
-  // Handle both array and object responses
-  if (Array.isArray(data.places)) {
-    return data.places;
+  // Google Places API (New) returns results in data.places array
+  const places = data.places;
+  if (Array.isArray(places)) {
+    return places;
   }
-  if (data.places && Array.isArray(data.places)) {
-    return data.places;
+  
+  // If places is not an array, log warning and return empty
+  if (places) {
+    console.warn(`Unexpected Places API response format for query "${query}"`);
   }
   return [];
 }
@@ -138,11 +143,24 @@ export async function getPlaceDetails(
   apiKey: string
 ): Promise<GooglePlaceResult | null> {
   const url = new URL(`https://places.googleapis.com/v1/places/${placeId}`);
-  url.searchParams.set('fields', 'id,displayName,formattedAddress,location,rating,userRatingCount,nationalPhoneNumber,websiteUri,types');
+  
+  // REQUIRED: Use X-Goog-FieldMask header, not fields query param
+  const fieldMask = [
+    'id',
+    'displayName',
+    'formattedAddress',
+    'location',
+    'rating',
+    'userRatingCount',
+    'nationalPhoneNumber',
+    'websiteUri',
+    'types',
+  ].join(',');
 
   const response = await fetch(url.toString(), {
     headers: {
       'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': fieldMask, // REQUIRED for Places API (New)
     },
   });
 

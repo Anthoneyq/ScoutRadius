@@ -132,8 +132,13 @@ export default function Home() {
       
       setPlaces(foundPlaces);
       
+      // Log helpful debug info if no results
       if (foundPlaces.length === 0) {
-        alert('No places found. Check browser console for details. Make sure Google Maps API key is configured.');
+        if (searchData.debug?.bypassedFiltering) {
+          console.warn('Filtering removed all places - raw results returned for debugging');
+        } else if (searchData.debug?.totalResultsFound === 0) {
+          console.warn('Google Places API returned 0 results - check API key and enabled APIs');
+        }
       }
     } catch (error) {
       console.error('Search error:', error);
