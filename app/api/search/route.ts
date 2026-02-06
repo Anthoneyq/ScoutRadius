@@ -300,6 +300,7 @@ export async function POST(request: NextRequest) {
     // If no places found at all, try fallback search without type restrictions
     if (uniquePlaces.length === 0 && uniqueRawPlaces.length === 0 && totalResultsFound === 0) {
       console.warn(`[Search API] No places found with type restrictions. Trying fallback search without type restrictions...`);
+      console.warn(`[Search API] API Key check: ${apiKey ? `Present (${apiKey.substring(0, 10)}...)` : 'MISSING'}`);
       
       // Retry search without type restrictions for first sport only (to avoid too many API calls)
       const firstSport = sports[0];
@@ -307,6 +308,7 @@ export async function POST(request: NextRequest) {
       const firstKeyword = keywords[0];
       
       try {
+        console.log(`[Search API] Fallback: Searching "${firstKeyword}" without type restrictions`);
         const fallbackResults = await searchPlaces(
           firstKeyword,
           { lat: origin.lat, lng: origin.lng },
@@ -318,7 +320,9 @@ export async function POST(request: NextRequest) {
         console.log(`[Search API] Fallback search (no type restrictions): ${fallbackResults.length} results`);
         
         if (fallbackResults.length > 0) {
-          console.warn(`[Search API] Type restrictions were too strict. Consider relaxing INCLUDED_PLACE_TYPES.`);
+          console.warn(`[Search API] SUCCESS: Fallback found ${fallbackResults.length} results. Type restrictions were too strict.`);
+          totalResultsFound += fallbackResults.length;
+          
           // Process fallback results
           for (const googlePlace of fallbackResults.slice(0, 10)) { // Limit to first 10
             try {
@@ -338,14 +342,40 @@ export async function POST(request: NextRequest) {
               
               if (!isExcluded) {
                 rawPlacesBeforeFiltering.push(place);
+                // Add to allPlaces for processing
+                allPlaces.push(place);
               }
             } catch (err) {
               console.error(`Error processing fallback place:`, err);
             }
           }
+          
+          // Re-deduplicate after adding fallback results
+          const updatedUniquePlaces = deduplicatePlaces(allPlaces);
+          const updatedUniqueRawPlaces = deduplicatePlaces(rawPlacesBeforeFiltering);
+          
+          if (updatedUniquePlaces.length > 0) {
+            return NextResponse.json({ 
+              places: updatedUniquePlaces,
+              debug: {
+                totalResultsFound,
+                rawPlacesCount: updatedUniqueRawPlaces.length,
+                totalResultsAfterPolygonFilter,
+                totalResultsAfterDriveTimeFilter,
+                uniquePlacesCount: updatedUniquePlaces.length,
+                hasIsochrone: !!isochronePolygon,
+                usedFallback: true,
+                message: 'Fallback search without type restrictions found results',
+              }
+            });
+          }
+        } else {
+          console.error(`[Search API] Fallback search also returned 0 results. This suggests an API key or configuration issue.`);
         }
       } catch (fallbackError) {
-        console.error(`[Search API] Fallback search also failed:`, fallbackError);
+        const errorMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        console.error(`[Search API] Fallback search failed:`, errorMsg);
+        console.error(`[Search API] Full error:`, fallbackError);
       }
       
       console.warn(`[Search API] No places found for search: ${sports.join(', ')} near [${origin.lat}, ${origin.lng}]`);
