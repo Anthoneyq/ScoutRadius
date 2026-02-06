@@ -24,6 +24,7 @@ export default function Home() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tags, setTags] = useState<Record<string, string>>({});
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state
   
   // Track if we're loading from localStorage to prevent save loops
   const isInitialLoadRef = useRef(true);
@@ -254,8 +255,82 @@ export default function Home() {
         />
       </div>
 
-      {/* TOP CONTROL BAR — luxury overlay */}
-      <div className="absolute top-0 left-0 right-0 z-30 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30">
+      {/* MOBILE HAMBURGER BUTTON — always visible on mobile */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-luxury-card backdrop-blur-md border border-[#334155]/30 rounded-md text-primary hover:border-[#fbbf24]/30 hover:shadow-[0_0_16px_rgba(251,191,36,0.15)] transition-luxury"
+        aria-label="Toggle sidebar"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {sidebarOpen ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+          )}
+        </svg>
+      </button>
+
+      {/* MOBILE SIDEBAR — slides in from left on mobile */}
+      <div className={`md:hidden fixed inset-y-0 left-0 z-40 w-[85vw] max-w-sm bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        {/* Sidebar Header */}
+        <div className="sticky top-0 bg-luxury-card border-b border-[#334155]/30 px-4 py-3 flex items-center justify-between z-10">
+          <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-1 text-tertiary hover:text-primary transition-luxury"
+            aria-label="Close sidebar"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Sidebar Content */}
+        <div className="px-4 py-4 space-y-4">
+          {/* Controls in Sidebar */}
+          <Controls 
+            onSearch={handleSearch} 
+            isLoading={isLoading}
+            selectedAgeGroups={selectedAgeGroups}
+            onAgeGroupsChange={setSelectedAgeGroups}
+          />
+
+          {/* Results Table in Sidebar */}
+          <div className="flex flex-col bg-luxury-card border border-[#334155]/30 rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 280px)' }}>
+            <ResultsTable
+              places={places}
+              selectedPlaceId={selectedPlaceId}
+              onPlaceClick={handlePlaceClick}
+              notes={notes}
+              tags={tags}
+              onNotesChange={handleNotesChange}
+              onTagsChange={handleTagsChange}
+              onExport={handleExport}
+              selectedAgeGroups={selectedAgeGroups}
+              totalClubs={totalClubs}
+              highConfidenceClubs={highConfidenceClubs}
+              avgDriveTime={avgDriveTime}
+              avgDistance={avgDistance}
+              youthFocusedPercent={youthFocusedPercent}
+              mixedRecreationalPercent={mixedRecreationalPercent}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* MOBILE SIDEBAR BACKDROP — closes sidebar when clicked */}
+      {sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* DESKTOP TOP CONTROL BAR — hidden on mobile */}
+      <div className="hidden md:block absolute top-0 left-0 right-0 z-30 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
@@ -301,8 +376,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* RIGHT RESULTS PANEL — luxury overlay, responsive width */}
-      <div className="absolute right-0 md:right-5 top-44 bottom-5 z-20 w-full md:w-[420px] px-2 md:px-0 pointer-events-none">
+      {/* DESKTOP RIGHT RESULTS PANEL — hidden on mobile (shown in sidebar instead) */}
+      <div className="hidden md:block absolute right-5 top-44 bottom-5 z-20 w-[420px] pointer-events-none">
         <div className="h-full pointer-events-auto flex flex-col bg-luxury-card backdrop-blur-md border border-[#334155]/30 rounded-lg overflow-hidden">
           {/* ALWAYS MOUNTED — never conditionally rendered */}
           <ResultsTable
