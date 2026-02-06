@@ -5,50 +5,49 @@ import { Place } from '@/lib/googlePlaces';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 
-// Club-intent keywords (avoid generic terms that trigger restaurants/bars)
+// FIXED: Expanded queries - rotate multiple queries per sport
+// Google Places (New) is stricter, need broader search terms
 const SPORT_KEYWORDS: Record<string, string[]> = {
   'volleyball': [
-    'youth volleyball club',
-    'junior volleyball club',
-    'competitive volleyball club',
-    'volleyball training academy',
     'volleyball club',
+    'volleyball academy',
+    'youth volleyball',
+    'club volleyball',
+    'travel volleyball',
+    'volleyball training',
+    'competitive volleyball',
   ],
   'track and field': [
     'track and field club',
+    'track club',
     'youth track club',
-    'junior track club',
-    'track and field academy',
     'running club',
     'athletics club',
+    'track and field academy',
   ],
   'basketball': [
-    'youth basketball club',
-    'junior basketball club',
-    'competitive basketball club',
-    'basketball training academy',
     'basketball club',
+    'youth basketball',
+    'basketball academy',
+    'club basketball',
+    'basketball training',
+    'competitive basketball',
   ],
   'softball': [
-    'youth softball club',
-    'junior softball club',
-    'competitive softball club',
-    'softball training academy',
     'softball club',
+    'youth softball',
+    'softball academy',
+    'club softball',
+    'softball training',
+    'competitive softball',
   ],
 };
 
-// Place types to include (excludes restaurants, bars, retail, etc.)
-// Note: If too restrictive, try removing some types or making this optional
-const INCLUDED_PLACE_TYPES = [
-  'sports_club',
-  'school',
-  'gym',
-  'recreation_center',
-];
-
-// Fallback: Try without type restrictions if initial search fails
-const FALLBACK_INCLUDED_TYPES: string[] = []; // Empty = no type restriction
+// REMOVED: includedTypes completely
+// Google Places (New) has inconsistent type taxonomy
+// Most clubs are NOT labeled sports_club
+// Volleyball gyms are often gym, point_of_interest, or untyped
+// We score + rank client-side instead of hard-filtering
 
 // Keywords that indicate non-club venues (to exclude)
 const EXCLUDED_KEYWORDS = [
@@ -149,20 +148,25 @@ export async function POST(request: NextRequest) {
     for (const sport of sports) {
       const keywords = SPORT_KEYWORDS[sport.toLowerCase()] || [`${sport} club`];
       
-      // Search with each keyword
+      // Search with each keyword (aggregate before dedupe)
       for (const keyword of keywords) {
         try {
-          console.log(`[Search API] Searching for "${keyword}" (sport: ${sport}) with types: ${INCLUDED_PLACE_TYPES.join(', ')}`);
+          console.log(`[Search API] Searching for "${keyword}" (sport: ${sport})`);
           const results = await searchPlaces(
             keyword,
             { lat: origin.lat, lng: origin.lng },
             radiusMeters,
             apiKey,
-            INCLUDED_PLACE_TYPES // Restrict to sports_club, school, gym, recreation_center
+            undefined // NO type restrictions - Google Places (New) has inconsistent taxonomy
           );
 
           totalResultsFound += results.length;
           console.log(`[Search API] Keyword "${keyword}": ${results.length} raw results from Google Places`);
+          
+          // TEMP DEBUG: If zero results, log request payload
+          if (results.length === 0) {
+            console.warn(`[Search API] ZERO RESULTS FROM GOOGLE for "${keyword}"`);
+          }
 
           // Convert and filter results
           for (const googlePlace of results) {
@@ -265,6 +269,53 @@ export async function POST(request: NextRequest) {
           console.error(`Search failed for "${sport}" keyword "${keyword}": ${errorMessage}`);
           // Continue with other keywords - one failure shouldn't stop the entire search
         }
+      }
+    }
+
+    // HARD SAFETY FALLBACK: If no results, try generic sport + gym query
+    if (totalResultsFound === 0 && sports.length > 0) {
+      console.warn(`[Search API] Primary queries returned 0 results — running fallback`);
+      const firstSport = sports[0];
+      const fallbackQuery = `${firstSport} gym`;
+      
+      try {
+        const fallbackResults = await searchPlaces(
+          fallbackQuery,
+          { lat: origin.lat, lng: origin.lng },
+          radiusMeters,
+          apiKey,
+          undefined // No type restrictions
+        );
+        
+        console.log(`[Search API] Fallback query "${fallbackQuery}": ${fallbackResults.length} results`);
+        totalResultsFound += fallbackResults.length;
+        
+        // Process fallback results
+        for (const googlePlace of fallbackResults) {
+          try {
+            const place = convertGooglePlace(googlePlace, firstSport);
+            const clubScore = getClubConfidence(place);
+            place.clubScore = clubScore;
+            place.isClub = clubScore >= 3;
+            const ageGroups = getAgeGroupScores(place);
+            place.ageGroups = ageGroups;
+            place.primaryAgeGroup = getPrimaryAgeGroup(ageGroups);
+            
+            // Still apply exclusion filter
+            const placeNameLower = place.name.toLowerCase();
+            const isExcluded = EXCLUDED_KEYWORDS.some(keyword => 
+              placeNameLower.includes(keyword)
+            );
+            
+            if (!isExcluded) {
+              rawPlacesBeforeFiltering.push(place);
+            }
+          } catch (err) {
+            console.error(`Error processing fallback place:`, err);
+          }
+        }
+      } catch (fallbackError) {
+        console.error(`[Search API] Fallback search failed:`, fallbackError);
       }
     }
 

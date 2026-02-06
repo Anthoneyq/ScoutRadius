@@ -64,18 +64,20 @@ export interface GooglePlaceResult {
 
 /**
  * Search for places by text query
+ * FIXED: Removed includedTypes, added languageCode and rankPreference
  */
 export async function searchPlaces(
   query: string,
   location: { lat: number; lng: number },
   radius: number, // meters
   apiKey: string,
-  includedTypes?: string[] // Optional: restrict to specific place types
+  includedTypes?: string[] // DEPRECATED: Not used - Google Places (New) has inconsistent type taxonomy
 ): Promise<GooglePlaceResult[]> {
-  const url = new URL('https://places.googleapis.com/v1/places:searchText');
-  
-  const body: any = {
+  // FIXED: Proper request body construction
+  const requestBody = {
     textQuery: query,
+    languageCode: "en", // REQUIRED for consistent results
+    maxResultCount: 20, // Reduced from 50 for better performance
     locationBias: {
       circle: {
         center: {
@@ -85,45 +87,40 @@ export async function searchPlaces(
         radius: radius,
       },
     },
-    maxResultCount: 50,
+    rankPreference: "DISTANCE", // Prioritize closer results
+    // DO NOT use includedTypes - Google Places (New) has inconsistent type taxonomy
+    // Most clubs are NOT labeled sports_club
+    // We score + rank client-side instead
   };
-  
-  // Add includedTypes if provided (restricts to specific place types)
-  if (includedTypes && includedTypes.length > 0) {
-    body.includedTypes = includedTypes;
-  }
 
   // REQUIRED: Google Places API (New) requires X-Goog-FieldMask header
-  // Without this header, the API will return an error or empty results
-  // Specify which fields to return - this is mandatory, not optional
   const fieldMask = [
     'places.id',
     'places.displayName',
     'places.formattedAddress',
     'places.location',
+    'places.types',
     'places.rating',
     'places.userRatingCount',
-    'places.nationalPhoneNumber',
     'places.websiteUri',
-    'places.types', // Include types for filtering
+    'places.nationalPhoneNumber',
   ].join(',');
 
   // Log request details for debugging
   console.log(`[Google Places] Searching: "${query}"`, {
     location: { lat: location.lat, lng: location.lng },
     radiusMeters: radius,
-    includedTypes: includedTypes?.join(', ') || 'none',
-    maxResultCount: body.maxResultCount,
+    requestBody: JSON.stringify(requestBody),
   });
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': fieldMask, // REQUIRED for Places API (New)
+      'X-Goog-FieldMask': fieldMask,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
@@ -143,37 +140,29 @@ export async function searchPlaces(
       error: errorMessage,
       errorDetails,
       query,
-      url: url.toString().substring(0, 100),
+      requestBody: JSON.stringify(requestBody),
     });
     throw new Error(`Google Places API ${response.status}: ${errorMessage}`);
   }
 
   const data = await response.json();
   
-  // Google Places API (New) returns results in data.places array
+  if (!data.places) {
+    console.error('[Google Places] No places array in response:', data);
+    return [];
+  }
+
   const places = data.places;
   if (Array.isArray(places)) {
     console.log(`[Google Places] Found ${places.length} results for "${query}"`);
     if (places.length === 0) {
       console.warn(`[Google Places] Zero results for "${query}"`);
-      console.warn(`[Google Places] Request details:`, {
-        query,
-        location: { lat: location.lat, lng: location.lng },
-        radiusMeters: radius,
-        includedTypes: includedTypes?.join(', ') || 'none',
-        responseStatus: response.status,
-        responseData: JSON.stringify(data).substring(0, 500), // First 500 chars of response
-      });
+      console.warn(`[Google Places] Response data:`, JSON.stringify(data).substring(0, 500));
     }
     return places;
   }
   
-  // If places is not an array, log warning and return empty
-  console.warn(`[Google Places] Unexpected response format for query "${query}":`, {
-    responseData: data,
-    hasPlaces: !!places,
-    placesType: typeof places,
-  });
+  console.warn(`[Google Places] Unexpected response format for query "${query}":`, data);
   return [];
 }
 
