@@ -33,7 +33,8 @@ interface ResultsTableProps {
   onNotesChange: (placeId: string, notes: string) => void;
   onTagsChange: (placeId: string, tags: string) => void;
   onExport: () => void;
-  onlyClubs: boolean; // Filter to only clubs when true
+  onlyClubs: boolean; // Prioritize clubs when true (re-ranks, doesn't filter)
+  showRecreational: boolean; // Show recreational locations when true
   selectedAgeGroups: string[]; // Filter by age groups
 }
 
@@ -51,6 +52,7 @@ export default function ResultsTable(props: ResultsTableProps) {
     onTagsChange = () => {},
     onExport = () => {},
     onlyClubs = false,
+    showRecreational = true,
     selectedAgeGroups = [],
   } = props || {};
   const [sortField, setSortField] = useState<SortField>('driveTime');
@@ -71,8 +73,9 @@ export default function ResultsTable(props: ResultsTableProps) {
     if (!Array.isArray(places)) return [];
     
     let filtered = places.filter(place => {
-      // Filter by "only clubs" toggle
-      if (onlyClubs && !place.isClub) {
+      // Filter by "show recreational" toggle
+      // When OFF, hide recreational/uncertain places (clubScore < 2)
+      if (!showRecreational && (place.clubScore ?? 0) < 2) {
         return false;
       }
       
@@ -103,8 +106,18 @@ export default function ResultsTable(props: ResultsTableProps) {
       return true;
     });
     
-    // Sort: primary by clubScore (descending), secondary by drive time (ascending), tertiary by selected field
+    // Sort: When "Prioritize Clubs" is ON, clubs float to top
+    // Otherwise: primary by clubScore (descending), secondary by drive time (ascending)
     filtered.sort((a, b) => {
+      // If "Prioritize Clubs" toggle is ON, clubs always rank higher
+      if (onlyClubs) {
+        const aIsClub = a.isClub ?? false;
+        const bIsClub = b.isClub ?? false;
+        if (aIsClub !== bIsClub) {
+          return bIsClub ? 1 : -1; // Clubs first
+        }
+      }
+      
       // Primary sort: clubScore (highest confidence first)
       const scoreA = a.clubScore ?? 0;
       const scoreB = b.clubScore ?? 0;
@@ -139,7 +152,7 @@ export default function ResultsTable(props: ResultsTableProps) {
     });
 
     return filtered;
-  }, [places, sortField, sortDirection, filterSport, searchQuery, onlyClubs, selectedAgeGroups]);
+  }, [places, sortField, sortDirection, filterSport, searchQuery, onlyClubs, showRecreational, selectedAgeGroups]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

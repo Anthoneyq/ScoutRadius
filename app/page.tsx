@@ -19,6 +19,7 @@ export default function Home() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tags, setTags] = useState<Record<string, string>>({});
   const [onlyClubs, setOnlyClubs] = useState(false);
+  const [showRecreational, setShowRecreational] = useState(true); // Show all by default
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
   
   // Track if we're loading from localStorage to prevent save loops
@@ -221,6 +222,8 @@ export default function Home() {
         isLoading={isLoading}
         onlyClubs={onlyClubs}
         onOnlyClubsChange={setOnlyClubs}
+        showRecreational={showRecreational}
+        onShowRecreationalChange={setShowRecreational}
         selectedAgeGroups={selectedAgeGroups}
         onAgeGroupsChange={setSelectedAgeGroups}
       />
@@ -256,6 +259,12 @@ export default function Home() {
                 <div className="text-xs text-slate-400 mt-0.5">Club Confidence</div>
               </div>
             )}
+            {!showRecreational && (
+              <div className="card-dark rounded-lg px-4 py-3 border-l-2 border-slate-500/50">
+                <div className="text-sm font-medium text-slate-300">Recreational</div>
+                <div className="text-xs text-slate-400 mt-0.5">Hidden</div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -285,6 +294,7 @@ export default function Home() {
             onTagsChange={handleTagsChange}
             onExport={handleExport}
             onlyClubs={onlyClubs}
+            showRecreational={showRecreational}
             selectedAgeGroups={selectedAgeGroups}
           />
         </div>

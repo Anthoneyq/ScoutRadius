@@ -7,6 +7,8 @@ interface ControlsProps {
   isLoading: boolean;
   onlyClubs: boolean;
   onOnlyClubsChange: (onlyClubs: boolean) => void;
+  showRecreational: boolean;
+  onShowRecreationalChange: (show: boolean) => void;
   selectedAgeGroups: string[];
   onAgeGroupsChange: (ageGroups: string[]) => void;
 }
@@ -31,6 +33,8 @@ export default function Controls(props: ControlsProps) {
     isLoading = false,
     onlyClubs = false,
     onOnlyClubsChange = () => {},
+    showRecreational = true,
+    onShowRecreationalChange = () => {},
     selectedAgeGroups = [],
     onAgeGroupsChange = () => {},
   } = props || {};
@@ -222,7 +226,7 @@ export default function Controls(props: ControlsProps) {
         </div>
 
         {/* Toggles - Horizontal */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -233,6 +237,18 @@ export default function Controls(props: ControlsProps) {
             />
             <span className="text-sm font-medium text-slate-300">
               Prioritize Clubs / Teams
+            </span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showRecreational}
+              onChange={(e) => onShowRecreationalChange(e.target.checked)}
+              disabled={isLoading}
+              className="w-4 h-4 text-slate-400 border-slate-600 rounded bg-slate-800 focus:ring-slate-500"
+            />
+            <span className="text-sm font-medium text-slate-300">
+              Show Recreational Locations
             </span>
           </label>
         </div>
