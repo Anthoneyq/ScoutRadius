@@ -36,6 +36,13 @@ interface ResultsTableProps {
   onlyClubs: boolean; // Prioritize clubs when true (re-ranks, doesn't filter)
   showRecreational: boolean; // Show recreational locations when true
   selectedAgeGroups: string[]; // Filter by age groups
+  totalClubs?: number;
+  highConfidenceClubs?: number;
+  avgDriveTime?: number;
+  youthFocusedPercent?: number;
+  mixedRecreationalPercent?: number;
+  onlyClubsActive?: boolean;
+  recreationalHidden?: boolean;
 }
 
 type SortField = 'name' | 'sport' | 'driveTime' | 'distance' | 'rating' | 'review_count';
@@ -54,6 +61,13 @@ export default function ResultsTable(props: ResultsTableProps) {
     onlyClubs = false,
     showRecreational = true,
     selectedAgeGroups = [],
+    totalClubs = 0,
+    highConfidenceClubs = 0,
+    avgDriveTime = 0,
+    youthFocusedPercent = 0,
+    mixedRecreationalPercent = 0,
+    onlyClubsActive = false,
+    recreationalHidden = false,
   } = props || {};
   const [sortField, setSortField] = useState<SortField>('driveTime');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -169,158 +183,204 @@ export default function ResultsTable(props: ResultsTableProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0f172a]">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-800/50">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-200">Ranking</h2>
+    <div className="flex flex-col h-full bg-[#0e1420]">
+      {/* Section 1: Area Summary - Always Visible */}
+      <div className="px-4 py-3 border-b border-[#1f2937]/30">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-light text-tertiary uppercase tracking-wider">Coverage</h2>
           <button
             onClick={onExport}
-            className="px-3 py-1.5 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md transition-colors"
+            className="px-2.5 py-1 text-xs font-light text-tertiary hover:text-secondary uppercase tracking-wider transition-colors"
           >
-            Export CSV
+            Export
           </button>
         </div>
-        <div className="text-xs text-slate-400 mt-1">
-          {filteredAndSorted.length} of {places.length} clubs
+        
+        {/* Compact stat strip */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="card-dark rounded-lg px-3 py-2">
+            <div className="text-xl font-light text-numeric text-primary">{totalClubs || '—'}</div>
+            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Total</div>
+          </div>
+          <div className="card-dark rounded-lg px-3 py-2">
+            <div className="text-xl font-light text-numeric accent-teal">{highConfidenceClubs || '—'}</div>
+            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Confidence</div>
+          </div>
+          <div className="card-dark rounded-lg px-3 py-2">
+            <div className="text-xl font-light text-numeric text-primary">{avgDriveTime || '—'}</div>
+            <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Avg Time</div>
+          </div>
         </div>
+        
+        {/* Status indicators */}
+        {(onlyClubsActive || recreationalHidden) && (
+          <div className="flex gap-2 mt-2">
+            {onlyClubsActive && (
+              <div className="text-[10px] text-tertiary uppercase tracking-wider">
+                Sorted by Confidence
+              </div>
+            )}
+            {recreationalHidden && (
+              <div className="text-[10px] text-tertiary uppercase tracking-wider">
+                Recreational Hidden
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
-      {/* Search/Filter */}
-      <div className="px-4 py-2 border-b border-slate-800/50 space-y-2">
+      {/* Section 2: Search/Filter */}
+      <div className="px-4 py-2.5 border-b border-[#1f2937]/30 space-y-2">
         <input
           type="text"
-          placeholder="Search clubs..."
+          placeholder="Filter ranking..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-3 py-1.5 bg-[#1e293b] border border-slate-700/50 rounded-md text-sm text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-slate-600 focus:border-slate-600"
+          className="w-full px-3 py-1.5 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-sm text-primary placeholder-text-tertiary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 font-light backdrop-blur-sm"
         />
         {sports.length > 0 && (
           <select
             value={filterSport}
             onChange={(e) => setFilterSport(e.target.value)}
-            className="w-full px-3 py-1.5 bg-[#1e293b] border border-slate-700/50 rounded-md text-sm text-slate-100 focus:ring-1 focus:ring-slate-600 focus:border-slate-600"
+            className="w-full px-3 py-1.5 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-sm text-primary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 font-light backdrop-blur-sm"
           >
             <option value="all">All Sports</option>
             {sports.map(sport => (
-              <option key={sport} value={sport}>{sport}</option>
+              <option key={sport} value={sport} className="bg-[#111827]">{sport}</option>
             ))}
           </select>
         )}
       </div>
 
-      {/* Ranking List */}
+      {/* Section 2: Ranked Results - Intelligence Dossier Style */}
       <div className="flex-1 overflow-auto">
-        <div className="space-y-0.5">
-          {filteredAndSorted.map((place, index) => {
-            // Safety guard: ensure name is a string
-            const displayName = typeof place.name === 'string' ? place.name : '';
-            const clubScore = place.clubScore ?? 0;
-            const isSelected = selectedPlaceId === place.place_id;
-            
-            // Confidence badge
-            let confidenceBadge: JSX.Element;
-            if (clubScore >= 4) {
-              confidenceBadge = <span className="text-xs font-medium accent-green">Club</span>;
-            } else if (clubScore >= 2) {
-              confidenceBadge = <span className="text-xs font-medium accent-yellow">Possible</span>;
-            } else {
-              confidenceBadge = <span className="text-xs font-medium accent-gray">Venue</span>;
-            }
-            
-            // Age group badges
-            const ageBadges: JSX.Element[] = [];
-            if (place.ageGroups) {
-              if (place.ageGroups.youth >= 2) {
-                ageBadges.push(<span key="youth" className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">Youth</span>);
+        {filteredAndSorted.length === 0 ? (
+          /* Section 3: Empty State - Never Blank */
+          <div className="px-4 py-8">
+            <div className="card-dark rounded-lg px-4 py-6 text-center">
+              <div className="text-sm font-light text-tertiary mb-2">No qualifying clubs</div>
+              <div className="text-xs text-tertiary font-light">
+                within current constraints
+              </div>
+              <div className="text-xs text-tertiary font-light mt-3">
+                Adjust drive time or toggle priority
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-[1px]">
+            {filteredAndSorted.map((place, index) => {
+              // Safety guard: ensure name is a string
+              const displayName = typeof place.name === 'string' ? place.name : '';
+              const clubScore = place.clubScore ?? 0;
+              const isSelected = selectedPlaceId === place.place_id;
+              
+              // Confidence indicator (dot/bar style)
+              let confidenceIndicator: JSX.Element;
+              if (clubScore >= 4) {
+                confidenceIndicator = <div className="w-1.5 h-1.5 rounded-full bg-[#14b8a6]"></div>;
+              } else if (clubScore >= 2) {
+                confidenceIndicator = <div className="w-1.5 h-1.5 rounded-full bg-[#64748b]"></div>;
+              } else {
+                confidenceIndicator = <div className="w-1.5 h-1.5 rounded-full bg-[#475569] opacity-60"></div>;
               }
-              if (place.ageGroups.highSchool >= 2) {
-                ageBadges.push(<span key="hs" className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">HS</span>);
+              
+              // Age group badges - subtle, muted
+              const ageBadges: JSX.Element[] = [];
+              if (place.ageGroups) {
+                if (place.ageGroups.youth >= 2) {
+                  ageBadges.push(<span key="youth" className="text-[10px] px-1.5 py-0.5 rounded bg-[#14b8a6]/15 text-[#14b8a6] font-light uppercase tracking-wider">Youth</span>);
+                }
+                if (place.ageGroups.highSchool >= 2) {
+                  ageBadges.push(<span key="hs" className="text-[10px] px-1.5 py-0.5 rounded bg-[#64748b]/15 text-[#64748b] font-light uppercase tracking-wider">HS</span>);
+                }
+                if (place.ageGroups.elite >= 2) {
+                  ageBadges.push(<span key="elite" className="text-[10px] px-1.5 py-0.5 rounded bg-[#f59e0b]/15 text-[#f59e0b] font-light uppercase tracking-wider">Elite</span>);
+                }
+                if (place.ageGroups.adult >= 2) {
+                  ageBadges.push(<span key="adult" className="text-[10px] px-1.5 py-0.5 rounded bg-[#6b7280]/15 text-[#6b7280] font-light uppercase tracking-wider">Adult</span>);
+                }
               }
-              if (place.ageGroups.elite >= 2) {
-                ageBadges.push(<span key="elite" className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400">Elite</span>);
-              }
-              if (place.ageGroups.adult >= 2) {
-                ageBadges.push(<span key="adult" className="text-xs px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-400">Adult</span>);
-              }
-            }
-            
-            return (
-              <div
-                key={place.place_id}
-                onClick={() => onPlaceClick(place.place_id)}
-                className={`px-4 py-3 border-b border-slate-800/30 cursor-pointer transition-colors ${
-                  isSelected 
-                    ? 'bg-slate-800/50 border-l-2 border-l-green-500' 
-                    : 'hover:bg-slate-800/30'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-slate-400 w-6">{index + 1}</span>
-                      <h3 className="font-semibold text-slate-100 text-sm truncate">{displayName}</h3>
-                      {place.isClub && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">Club</span>
-                      )}
+              
+              return (
+                <div
+                  key={place.place_id}
+                  onClick={() => onPlaceClick(place.place_id)}
+                  className={`px-4 py-3 cursor-pointer transition-all ${
+                    isSelected 
+                      ? 'bg-[#1f2937]/40 border-l-2 border-l-[#f59e0b]' 
+                      : 'hover:bg-[#1f2937]/20'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Rank number */}
+                    <div className="flex-shrink-0 w-6">
+                      <span className="text-xs font-light text-tertiary">{index + 1}</span>
                     </div>
                     
-                    {/* Age badges */}
-                    {ageBadges.length > 0 && (
-                      <div className="flex flex-wrap gap-1 ml-8 mb-1.5">
-                        {ageBadges}
+                    {/* Main content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3 mb-1.5">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-light text-primary leading-tight mb-1">{displayName}</h3>
+                          {place.isClub && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#14b8a6]/15 text-[#14b8a6] font-light uppercase tracking-wider inline-block mb-1">
+                              Club
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Drive time - right aligned, emphasized */}
+                        {place.driveTime !== null && place.driveTime !== undefined && (
+                          <div className="flex-shrink-0 text-right">
+                            <div className="text-base font-light text-numeric text-primary">{place.driveTime}</div>
+                            <div className="text-[10px] text-tertiary uppercase tracking-wider">min</div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    
-                    {/* Key metrics */}
-                    <div className="flex items-center gap-4 ml-8 text-xs text-slate-400">
-                      {place.driveTime !== null && place.driveTime !== undefined && (
-                        <span>
-                          <span className="font-semibold text-slate-300">{place.driveTime}</span> min
-                        </span>
+                      
+                      {/* Age badges */}
+                      {ageBadges.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {ageBadges}
+                        </div>
                       )}
-                      {place.distance !== null && place.distance !== undefined && (
-                        <span>
-                          <span className="font-semibold text-slate-300">{place.distance.toFixed(1)}</span> mi
-                        </span>
-                      )}
-                      {place.rating && (
-                        <span>
-                          <span className="font-semibold text-slate-300">{place.rating.toFixed(1)}</span> ⭐
-                        </span>
-                      )}
-                      {place.website && (
-                        <a
-                          href={place.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-slate-400 hover:text-slate-200"
-                        >
-                          ↗
-                        </a>
-                      )}
+                      
+                      {/* Secondary metrics */}
+                      <div className="flex items-center gap-3 text-xs text-tertiary font-light">
+                        {place.distance !== null && place.distance !== undefined && (
+                          <span>{place.distance.toFixed(1)} mi</span>
+                        )}
+                        {place.rating && (
+                          <span>{place.rating.toFixed(1)} ⭐</span>
+                        )}
+                        {place.website && (
+                          <a
+                            href={place.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-tertiary hover:text-secondary transition-colors"
+                          >
+                            ↗
+                          </a>
+                        )}
+                      </div>
+                      
+                      {/* Address - tertiary */}
+                      <div className="text-[11px] text-tertiary font-light mt-1 truncate">
+                        {place.address}
+                      </div>
                     </div>
                     
-                    {/* Address */}
-                    <div className="text-xs text-slate-500 ml-8 mt-0.5 truncate">
-                      {place.address}
+                    {/* Confidence indicator - right aligned */}
+                    <div className="flex-shrink-0 flex items-center">
+                      {confidenceIndicator}
                     </div>
-                  </div>
-                  
-                  {/* Confidence badge - right aligned */}
-                  <div className="flex-shrink-0">
-                    {confidenceBadge}
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-        
-        {filteredAndSorted.length === 0 && (
-          <div className="p-8 text-center text-slate-500 text-sm">
-            No clubs found. Try adjusting your filters.
+              );
+            })}
           </div>
         )}
       </div>

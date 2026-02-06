@@ -60,9 +60,18 @@ export default function MapView(props: MapViewProps) {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11', // Dark theme map
+      style: 'mapbox://styles/mapbox/dark-v11', // Dark, desaturated base map
       center: [-122.4194, 37.7749], // Default center, will update via flyTo
       zoom: 10,
+    });
+    
+    // Further dim the base map for intelligence-grade feel
+    map.current.on('style.load', () => {
+      if (map.current) {
+        // Reduce saturation and contrast of base map layers
+        map.current.setPaintProperty('water', 'fill-color', '#1a1f2e');
+        map.current.setPaintProperty('road-street', 'line-opacity', 0.3);
+      }
     });
 
     map.current.on('load', () => {
@@ -99,15 +108,15 @@ export default function MapView(props: MapViewProps) {
       originMarkerRef.current = null;
     }
 
-    // Add origin marker
+    // Add origin marker - gold/amber accent
     const el = document.createElement('div');
     el.className = 'origin-marker';
-    el.style.width = '18px';
-    el.style.height = '18px';
+    el.style.width = '16px';
+    el.style.height = '16px';
     el.style.borderRadius = '50%';
-    el.style.backgroundColor = '#6366f1'; // Indigo for origin
-    el.style.border = '3px solid white';
-    el.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.3), 0 2px 4px rgba(0,0,0,0.4)';
+    el.style.backgroundColor = '#f59e0b'; // Gold/amber for origin
+    el.style.border = '2px solid rgba(255,255,255,0.9)';
+    el.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.25), 0 2px 6px rgba(0,0,0,0.5)';
     el.style.cursor = 'pointer';
 
     originMarkerRef.current = new mapboxgl.Marker(el)
@@ -134,8 +143,8 @@ export default function MapView(props: MapViewProps) {
         type: 'fill',
         source: 'isochrone',
         paint: {
-          'fill-color': '#eab308', // Yellow for drive-time polygon
-          'fill-opacity': 0.15, // More subtle
+          'fill-color': '#f59e0b', // Gold/amber for drive-time polygon
+          'fill-opacity': 0.12, // Subtle, premium feel
         },
       });
 
@@ -144,11 +153,24 @@ export default function MapView(props: MapViewProps) {
         type: 'line',
         source: 'isochrone',
         paint: {
-          'line-color': '#eab308',
-          'line-width': 2,
-          'line-opacity': 0.6,
+          'line-color': '#f59e0b', // Gold/amber border
+          'line-width': 2.5,
+          'line-opacity': 0.7,
         },
       });
+      
+      // Add subtle glow effect for premium feel
+      map.current.addLayer({
+        id: 'isochrone-glow',
+        type: 'line',
+        source: 'isochrone',
+        paint: {
+          'line-color': '#f59e0b',
+          'line-width': 6,
+          'line-opacity': 0.15,
+          'line-blur': 3,
+        },
+      }, 'isochrone-outline');
     }
   }, [isochroneGeoJSON, isLoaded]);
 
@@ -180,42 +202,47 @@ export default function MapView(props: MapViewProps) {
           const clubScore = place.clubScore ?? 0;
           let markerColor: string;
           let markerSize: number;
+          let markerOpacity = '1';
           
           if (clubScore >= 4) {
-            markerColor = '#22c55e'; // Green
-            markerSize = isSelected ? 20 : 14;
-          } else if (clubScore >= 2) {
-            markerColor = '#eab308'; // Yellow
+            markerColor = '#14b8a6'; // Muted teal
             markerSize = isSelected ? 18 : 12;
-          } else {
-            markerColor = '#94a3b8'; // Gray
+          } else if (clubScore >= 2) {
+            markerColor = '#64748b'; // Slate
             markerSize = isSelected ? 16 : 10;
+          } else {
+            markerColor = '#475569'; // Darker slate
+            markerSize = isSelected ? 14 : 8;
+            markerOpacity = '0.6';
           }
           
           el.style.width = `${markerSize}px`;
           el.style.height = `${markerSize}px`;
           el.style.backgroundColor = markerColor;
+          el.style.opacity = markerOpacity;
           el.style.zIndex = isSelected ? '1000' : '1';
-          el.style.border = isSelected ? '3px solid white' : '2px solid rgba(255,255,255,0.8)';
+          el.style.border = isSelected ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)';
           el.style.boxShadow = isSelected 
-            ? '0 0 0 4px rgba(34, 197, 94, 0.3), 0 2px 8px rgba(0,0,0,0.4)' 
-            : '0 2px 4px rgba(0,0,0,0.3)';
+            ? '0 0 0 3px rgba(245, 158, 11, 0.2), 0 2px 8px rgba(0,0,0,0.5)' 
+            : '0 1px 3px rgba(0,0,0,0.4)';
         }
       } else {
-        // Create new marker with confidence-based color
+        // Create new marker - flat, minimal circles (Pergamum-style)
         const clubScore = place.clubScore ?? 0;
         let markerColor: string;
         let markerSize: number;
+        let markerOpacity = '1';
         
         if (clubScore >= 4) {
-          markerColor = '#22c55e'; // Green - high confidence
-          markerSize = isSelected ? 20 : 14;
-        } else if (clubScore >= 2) {
-          markerColor = '#eab308'; // Yellow - mixed
+          markerColor = '#14b8a6'; // Muted teal - high confidence (primary)
           markerSize = isSelected ? 18 : 12;
-        } else {
-          markerColor = '#94a3b8'; // Gray - uncertain/recreational
+        } else if (clubScore >= 2) {
+          markerColor = '#64748b'; // Slate - mixed (secondary)
           markerSize = isSelected ? 16 : 10;
+        } else {
+          markerColor = '#475569'; // Darker slate - uncertain/recreational
+          markerSize = isSelected ? 14 : 8;
+          markerOpacity = '0.6'; // Slight opacity for secondary markers
         }
         
         const el = document.createElement('div');
@@ -224,12 +251,13 @@ export default function MapView(props: MapViewProps) {
         el.style.height = `${markerSize}px`;
         el.style.borderRadius = '50%';
         el.style.backgroundColor = markerColor;
-        el.style.border = isSelected ? '3px solid white' : '2px solid rgba(255,255,255,0.8)';
+        el.style.opacity = markerOpacity;
+        el.style.border = isSelected ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.2)';
         el.style.boxShadow = isSelected 
-          ? '0 0 0 4px rgba(34, 197, 94, 0.3), 0 2px 8px rgba(0,0,0,0.4)' 
-          : '0 2px 4px rgba(0,0,0,0.3)';
+          ? '0 0 0 3px rgba(245, 158, 11, 0.2), 0 2px 8px rgba(0,0,0,0.5)' 
+          : '0 1px 3px rgba(0,0,0,0.4)';
         el.style.cursor = 'pointer';
-        el.style.transition = 'all 0.2s';
+        el.style.transition = 'all 0.2s ease-out';
 
         const marker = new mapboxgl.Marker(el)
           .setLngLat([place.location.lng, place.location.lat])
@@ -238,6 +266,16 @@ export default function MapView(props: MapViewProps) {
         el.addEventListener('click', () => {
           onPlaceClickRef.current(place.place_id);
         });
+        
+        // Hover behavior - subtle glow
+        el.addEventListener('mouseenter', () => {
+          el.style.boxShadow = '0 0 0 2px rgba(245, 158, 11, 0.3), 0 2px 8px rgba(0,0,0,0.5)';
+        });
+        el.addEventListener('mouseleave', () => {
+          el.style.boxShadow = isSelected 
+            ? '0 0 0 3px rgba(245, 158, 11, 0.2), 0 2px 8px rgba(0,0,0,0.5)' 
+            : '0 1px 3px rgba(0,0,0,0.4)';
+        });
 
         markersRef.current.set(place.place_id, marker);
       }
@@ -245,36 +283,45 @@ export default function MapView(props: MapViewProps) {
   }, [places, selectedPlaceId, isLoaded]);
 
   return (
-    <div className="w-full h-full relative bg-[#0f172a]">
+    <div className="w-full h-full relative bg-[#0e1420]">
       <div ref={mapContainer} className="w-full h-full" />
       {mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#0f172a]/95 z-10">
-          <div className="bg-[#1e293b] p-6 rounded-lg shadow-xl max-w-md mx-4 border border-slate-700/50">
-            <h3 className="text-lg font-semibold text-red-400 mb-2">Map Error</h3>
-            <p className="text-sm text-slate-300 mb-4">{mapError}</p>
-            <p className="text-xs text-slate-400">
-              Add your Mapbox token to <code className="bg-slate-800 px-1 rounded text-slate-200">.env.local</code>:
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0e1420]/95 z-10 backdrop-blur-sm">
+          <div className="bg-[#111827]/95 p-6 rounded-lg shadow-2xl max-w-md mx-4 border border-[#374151]/40 backdrop-blur-md">
+            <h3 className="text-base font-light text-secondary mb-2">Map Error</h3>
+            <p className="text-sm text-tertiary mb-4 font-light">{mapError}</p>
+            <p className="text-xs text-tertiary font-light">
+              Add your Mapbox token to <code className="bg-[#0e1420] px-1.5 py-0.5 rounded text-secondary">.env.local</code>:
               <br />
-              <code className="bg-slate-800 px-1 rounded text-slate-200">NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your_token</code>
+              <code className="bg-[#0e1420] px-1.5 py-0.5 rounded text-secondary">NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your_token</code>
             </p>
           </div>
         </div>
       )}
       <style jsx global>{`
         .mapboxgl-popup-content {
-          padding: 12px;
-          font-family: system-ui, -apple-system, sans-serif;
-          background-color: #1e293b;
-          color: #e2e8f0;
-          border: 1px solid rgba(148, 163, 184, 0.1);
+          padding: 14px;
+          font-family: 'Inter', system-ui, sans-serif;
+          background-color: rgba(17, 24, 39, 0.95);
+          color: #e5e7eb;
+          border: 1px solid rgba(107, 114, 128, 0.2);
+          backdrop-filter: blur(8px);
+          font-weight: 300;
         }
         .mapboxgl-popup-close-button {
-          font-size: 20px;
+          font-size: 18px;
           padding: 4px 8px;
-          color: #94a3b8;
+          color: #6b7280;
+          font-weight: 300;
         }
         .mapboxgl-popup-close-button:hover {
-          color: #e2e8f0;
+          color: #9ca3af;
+        }
+        .mapboxgl-control-container {
+          opacity: 0.7;
+        }
+        .mapboxgl-control-container:hover {
+          opacity: 1;
         }
       `}</style>
     </div>

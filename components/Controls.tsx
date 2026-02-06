@@ -131,18 +131,18 @@ export default function Controls(props: ControlsProps) {
   const isSearchDisabled = isLoading || !locationInput.trim() || selectedSports.length === 0;
 
   return (
-    <div className="px-6 py-4 border-b border-slate-800/50 bg-[#0f172a]">
-      <div className="flex flex-wrap items-end gap-4">
+    <div className="px-6 py-3 border-b border-[#1f2937]/30 bg-[#0e1420]">
+      <div className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+          <label className="block text-xs font-light text-tertiary mb-1.5 uppercase tracking-wider">
             Starting Location
           </label>
           <input
             type="text"
             value={locationInput}
             onChange={(e) => setLocationInput(e.target.value)}
-            placeholder="Address or lat,lng"
-            className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700/50 rounded-md text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-slate-600 focus:border-slate-600 text-sm"
+            placeholder="Address or coordinates"
+            className="w-full px-3 py-2 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-primary placeholder-text-tertiary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 text-sm font-light backdrop-blur-sm"
             disabled={isLoading}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !isSearchDisabled) {
@@ -152,20 +152,20 @@ export default function Controls(props: ControlsProps) {
           />
         </div>
 
-        <div className="min-w-[140px]">
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+        <div className="min-w-[130px]">
+          <label className="block text-xs font-light text-tertiary mb-1.5 uppercase tracking-wider">
             Drive Time
           </label>
           <select
             value={driveTime}
             onChange={(e) => setDriveTime(Number(e.target.value))}
             disabled={isLoading}
-            className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700/50 rounded-md text-slate-100 focus:ring-1 focus:ring-slate-600 focus:border-slate-600 text-sm"
+            className="w-full px-3 py-2 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-primary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 text-sm font-light backdrop-blur-sm"
           >
             {Array.from({ length: 12 }, (_, i) => {
               const minutes = (i + 1) * 5;
               return (
-                <option key={minutes} value={minutes}>
+                <option key={minutes} value={minutes} className="bg-[#111827]">
                   {minutes} min
                 </option>
               );
@@ -173,26 +173,26 @@ export default function Controls(props: ControlsProps) {
           </select>
         </div>
 
-        <div className="relative min-w-[160px]">
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+        <div className="relative min-w-[150px]">
+          <label className="block text-xs font-light text-tertiary mb-1.5 uppercase tracking-wider">
             Sport
           </label>
           <button
             type="button"
             onClick={() => setShowSportsDropdown(!showSportsDropdown)}
             disabled={isLoading}
-            className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700/50 rounded-md text-left text-slate-100 text-sm focus:ring-1 focus:ring-slate-600 focus:border-slate-600 flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-3 py-2 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-left text-primary text-sm font-light focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
           >
-            <span className={selectedSports.length === 0 ? 'text-slate-500' : ''}>
+            <span className={selectedSports.length === 0 ? 'text-tertiary' : ''}>
               {getSportsDisplayText()}
             </span>
             <svg
-              className={`w-4 h-4 transition-transform text-slate-400 ${showSportsDropdown ? 'rotate-180' : ''}`}
+              className={`w-3.5 h-3.5 transition-transform text-tertiary ${showSportsDropdown ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
           
@@ -202,21 +202,21 @@ export default function Controls(props: ControlsProps) {
                 className="fixed inset-0 z-10"
                 onClick={() => setShowSportsDropdown(false)}
               />
-              <div className="absolute z-20 w-full mt-1 bg-[#1e293b] border border-slate-700/50 rounded-md shadow-xl max-h-48 overflow-y-auto">
-                <div className="p-2 space-y-1">
+              <div className="absolute z-20 w-full mt-1 bg-[#111827]/95 border border-[#374151]/40 rounded-lg shadow-2xl max-h-48 overflow-y-auto backdrop-blur-md">
+                <div className="p-1.5 space-y-0.5">
                   {SPORTS.map((sport) => (
                     <label
                       key={sport.id}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-slate-700/30 cursor-pointer rounded"
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-[#1f2937]/50 cursor-pointer rounded"
                     >
                       <input
                         type="checkbox"
                         checked={selectedSports.includes(sport.id)}
                         onChange={() => toggleSport(sport.id)}
                         disabled={isLoading}
-                        className="w-4 h-4 text-green-500 border-slate-600 rounded bg-slate-800 focus:ring-green-500"
+                        className="w-3.5 h-3.5 accent-[#f59e0b] border-[#374151] rounded bg-[#0e1420] focus:ring-[#f59e0b]/30"
                       />
-                      <span className="text-sm text-slate-200">{sport.label}</span>
+                      <span className="text-sm text-secondary font-light">{sport.label}</span>
                     </label>
                   ))}
                 </div>
@@ -226,16 +226,16 @@ export default function Controls(props: ControlsProps) {
         </div>
 
         {/* Toggles - Horizontal */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-5">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={onlyClubs}
               onChange={(e) => onOnlyClubsChange(e.target.checked)}
               disabled={isLoading}
-              className="w-4 h-4 text-green-500 border-slate-600 rounded bg-slate-800 focus:ring-green-500"
+              className="w-3.5 h-3.5 accent-[#f59e0b] border-[#374151] rounded bg-[#0e1420] focus:ring-[#f59e0b]/30"
             />
-            <span className="text-sm font-medium text-slate-300">
+            <span className="text-xs font-light text-secondary uppercase tracking-wider">
               Prioritize Clubs / Teams
             </span>
           </label>
@@ -245,10 +245,10 @@ export default function Controls(props: ControlsProps) {
               checked={showRecreational}
               onChange={(e) => onShowRecreationalChange(e.target.checked)}
               disabled={isLoading}
-              className="w-4 h-4 text-slate-400 border-slate-600 rounded bg-slate-800 focus:ring-slate-500"
+              className="w-3.5 h-3.5 accent-[#6b7280] border-[#374151] rounded bg-[#0e1420] focus:ring-[#6b7280]/30"
             />
-            <span className="text-sm font-medium text-slate-300">
-              Show Recreational Locations
+            <span className="text-xs font-light text-secondary uppercase tracking-wider">
+              Show Recreational
             </span>
           </label>
         </div>
@@ -256,9 +256,9 @@ export default function Controls(props: ControlsProps) {
         <button
           onClick={handleSearch}
           disabled={isSearchDisabled}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+          className="px-5 py-2 bg-[#1f2937]/60 hover:bg-[#374151]/40 text-primary rounded-lg font-light disabled:opacity-40 disabled:cursor-not-allowed transition-all text-sm uppercase tracking-wider border border-[#374151]/30 backdrop-blur-sm"
         >
-          {isLoading ? 'Searching...' : 'Search'}
+          {isLoading ? 'Analyzing...' : 'Analyze Area'}
         </button>
       </div>
     </div>

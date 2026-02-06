@@ -210,13 +210,16 @@ export default function Home() {
   const mixedRecreationalPercent = totalClubs > 0 ? Math.round((mixedRecreational / totalClubs) * 100) : 0;
 
   return (
-    <div className="h-screen flex flex-col bg-[#0f172a] text-slate-200">
-      {/* Minimal header */}
-      <header className="px-6 py-3 border-b border-slate-800/50">
-        <h1 className="text-xl font-semibold text-slate-100">ScoutRadius</h1>
+    <div className="h-screen flex flex-col bg-[#0e1420] text-primary">
+      {/* Minimal Top Bar - Academic Style */}
+      <header className="px-6 py-2.5 border-b border-[#1f2937]/50">
+        <div className="flex items-center justify-between">
+          <h1 className="text-sm font-light text-secondary tracking-wide">ScoutRadius</h1>
+          {/* Future navigation space - low emphasis */}
+        </div>
       </header>
 
-      {/* Controls Panel - Horizontal, Simplified */}
+      {/* Control Strip - Above Map */}
       <Controls 
         onSearch={handleSearch} 
         isLoading={isLoading}
@@ -228,51 +231,10 @@ export default function Home() {
         onAgeGroupsChange={setSelectedAgeGroups}
       />
 
-      {/* Scout Summary Header */}
-      {totalClubs > 0 && (
-        <div className="px-6 py-4 border-b border-slate-800/50">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <div className="card-dark rounded-lg px-4 py-3">
-              <div className="text-3xl font-semibold text-numeric text-slate-100">{totalClubs}</div>
-              <div className="text-xs text-slate-400 mt-1">Total Clubs</div>
-            </div>
-            <div className="card-dark rounded-lg px-4 py-3">
-              <div className="text-3xl font-semibold text-numeric accent-green">{highConfidenceClubs}</div>
-              <div className="text-xs text-slate-400 mt-1">High-Confidence</div>
-            </div>
-            <div className="card-dark rounded-lg px-4 py-3">
-              <div className="text-3xl font-semibold text-numeric text-slate-100">{avgDriveTime}</div>
-              <div className="text-xs text-slate-400 mt-1">Avg Drive Time</div>
-              <div className="text-xs text-slate-500 mt-0.5">minutes</div>
-            </div>
-            <div className="card-dark rounded-lg px-4 py-3">
-              <div className="text-3xl font-semibold text-numeric text-slate-100">{youthFocusedPercent}%</div>
-              <div className="text-xs text-slate-400 mt-1">Youth-Focused</div>
-            </div>
-            <div className="card-dark rounded-lg px-4 py-3">
-              <div className="text-3xl font-semibold text-numeric accent-gray">{mixedRecreationalPercent}%</div>
-              <div className="text-xs text-slate-400 mt-1">Mixed / Rec</div>
-            </div>
-            {onlyClubs && (
-              <div className="card-dark rounded-lg px-4 py-3 border-l-2 border-green-500/50">
-                <div className="text-sm font-medium text-slate-300">Sorted by</div>
-                <div className="text-xs text-slate-400 mt-0.5">Club Confidence</div>
-              </div>
-            )}
-            {!showRecreational && (
-              <div className="card-dark rounded-lg px-4 py-3 border-l-2 border-slate-500/50">
-                <div className="text-sm font-medium text-slate-300">Recreational</div>
-                <div className="text-xs text-slate-400 mt-0.5">Hidden</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Main Content: Map + Table */}
+      {/* Main Canvas: Map-First Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Map - Increased height, dominates visually */}
-        <div className="flex-[1.3] border-r border-slate-800/50 h-full">
+        {/* Map - 70-75% of horizontal space, visually dominant */}
+        <div className="flex-[3] h-full border-r border-[#1f2937]/30">
           <MapView
             origin={origin}
             places={places}
@@ -282,8 +244,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Results Table - Right Panel */}
-        <div className="flex-1 overflow-hidden bg-[#0f172a]">
+        {/* Intelligence Panel - Right Side */}
+        <div className="flex-1 overflow-hidden bg-[#0e1420] flex flex-col">
           <ResultsTable
             places={places}
             selectedPlaceId={selectedPlaceId}
@@ -296,6 +258,13 @@ export default function Home() {
             onlyClubs={onlyClubs}
             showRecreational={showRecreational}
             selectedAgeGroups={selectedAgeGroups}
+            totalClubs={totalClubs}
+            highConfidenceClubs={highConfidenceClubs}
+            avgDriveTime={avgDriveTime}
+            youthFocusedPercent={youthFocusedPercent}
+            mixedRecreationalPercent={mixedRecreationalPercent}
+            onlyClubsActive={onlyClubs}
+            recreationalHidden={!showRecreational}
           />
         </div>
       </div>

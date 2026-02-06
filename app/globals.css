@@ -16,37 +16,57 @@ body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0f172a; /* Very dark blue/charcoal */
-  color: #e2e8f0; /* Light gray text */
+  background-color: #0e1420; /* Deep charcoal / near-black */
+  color: #e5e7eb; /* Off-white text */
+  font-weight: 300; /* Light weight for headings */
 }
 
-/* Dark theme utilities */
+/* Refined typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+/* Pergamum-style dark theme utilities */
 @layer utilities {
   .text-numeric {
-    font-weight: 600;
+    font-weight: 400; /* Slightly heavier for numbers, but restrained */
     letter-spacing: -0.02em;
   }
   
   .card-dark {
-    background-color: #1e293b; /* Slightly lighter than background */
-    border: 1px solid rgba(148, 163, 184, 0.1);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    background-color: rgba(17, 24, 39, 0.6); /* Dark glass effect */
+    border: 1px solid rgba(107, 114, 128, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
   }
   
-  .accent-green {
-    color: #22c55e; /* Green for high confidence */
+  .accent-gold {
+    color: #f59e0b; /* Gold/amber for drive-time polygon */
   }
   
-  .accent-yellow {
-    color: #eab308; /* Yellow for mixed */
+  .accent-teal {
+    color: #14b8a6; /* Muted teal for markers */
   }
   
-  .accent-gray {
-    color: #94a3b8; /* Gray for neutral/uncertain */
+  .accent-slate {
+    color: #64748b; /* Slate for secondary markers */
+  }
+  
+  .text-primary {
+    color: #e5e7eb; /* Off-white */
+  }
+  
+  .text-secondary {
+    color: #9ca3af; /* Muted gray */
+  }
+  
+  .text-tertiary {
+    color: #6b7280; /* Low-contrast slate */
   }
 }
