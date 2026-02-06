@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface ControlsProps {
   onSearch: (origin: { lat: number; lng: number }, driveTime: number, sports: string[]) => void;
@@ -70,19 +70,60 @@ export default function Controls(props: ControlsProps) {
     );
   };
 
-  // Calculate dropdown position when it opens
-  useEffect(() => {
-    if (showSportsDropdown && sportsButtonRef.current) {
-      const rect = sportsButtonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + 6, // 6px = mt-1.5 equivalent
-        left: rect.left,
-        width: rect.width,
-      });
-    } else {
+  // Calculate dropdown position when it opens or window resizes
+  const calculateDropdownPosition = useCallback(() => {
+    if (!showSportsDropdown || !sportsButtonRef.current) {
       setDropdownPosition(null);
+      return;
     }
+    
+    const rect = sportsButtonRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const dropdownHeight = 192; // max-h-48 = 192px
+    
+    // Calculate position
+    let top = rect.bottom + 6; // 6px = mt-1.5 equivalent
+    let left = rect.left;
+    let width = rect.width;
+    
+    // Adjust if dropdown would go off bottom of screen (show above instead)
+    if (top + dropdownHeight > viewportHeight && rect.top > dropdownHeight) {
+      top = rect.top - dropdownHeight - 6;
+    }
+    
+    // Ensure dropdown doesn't go off right edge of screen
+    if (left + width > viewportWidth - 16) {
+      left = viewportWidth - width - 16; // 16px padding from edge
+    }
+    
+    // Ensure dropdown doesn't go off left edge of screen
+    if (left < 16) {
+      left = 16; // 16px padding from edge
+      width = Math.min(width, viewportWidth - 32); // Adjust width if needed
+    }
+    
+    setDropdownPosition({
+      top,
+      left,
+      width,
+    });
   }, [showSportsDropdown]);
+
+  useEffect(() => {
+    calculateDropdownPosition();
+    
+    // Recalculate on window resize (important for mobile rotation)
+    if (showSportsDropdown) {
+      window.addEventListener('resize', calculateDropdownPosition);
+      window.addEventListener('scroll', calculateDropdownPosition, true);
+      
+      return () => {
+        window.removeEventListener('resize', calculateDropdownPosition);
+        window.removeEventListener('scroll', calculateDropdownPosition, true);
+      };
+    }
+  }, [showSportsDropdown, calculateDropdownPosition]);
 
   const handleSearch = async () => {
     if (!locationInput.trim()) {
