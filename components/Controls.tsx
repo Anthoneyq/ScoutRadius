@@ -127,18 +127,18 @@ export default function Controls(props: ControlsProps) {
   const isSearchDisabled = isLoading || !locationInput.trim() || selectedSports.length === 0;
 
   return (
-    <div className="p-6 bg-white border-b shadow-sm">
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+    <div className="px-6 py-4 border-b border-slate-800/50 bg-[#0f172a]">
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">
             Starting Location
           </label>
           <input
             type="text"
             value={locationInput}
             onChange={(e) => setLocationInput(e.target.value)}
-            placeholder="Address or lat,lng (e.g., 37.7749,-122.4194)"
-            className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Address or lat,lng"
+            className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700/50 rounded-md text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-slate-600 focus:border-slate-600 text-sm"
             disabled={isLoading}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !isSearchDisabled) {
@@ -148,42 +148,42 @@ export default function Controls(props: ControlsProps) {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="min-w-[140px]">
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">
             Drive Time
           </label>
           <select
             value={driveTime}
             onChange={(e) => setDriveTime(Number(e.target.value))}
             disabled={isLoading}
-            className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+            className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700/50 rounded-md text-slate-100 focus:ring-1 focus:ring-slate-600 focus:border-slate-600 text-sm"
           >
             {Array.from({ length: 12 }, (_, i) => {
               const minutes = (i + 1) * 5;
               return (
                 <option key={minutes} value={minutes}>
-                  {minutes} minutes
+                  {minutes} min
                 </option>
               );
             })}
           </select>
         </div>
 
-        <div className="relative">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Sports
+        <div className="relative min-w-[160px]">
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+            Sport
           </label>
           <button
             type="button"
             onClick={() => setShowSportsDropdown(!showSportsDropdown)}
             disabled={isLoading}
-            className="w-full px-4 py-2 border rounded-md text-left bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between disabled:bg-gray-50 disabled:cursor-not-allowed"
+            className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700/50 rounded-md text-left text-slate-100 text-sm focus:ring-1 focus:ring-slate-600 focus:border-slate-600 flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className={selectedSports.length === 0 ? 'text-gray-500' : ''}>
+            <span className={selectedSports.length === 0 ? 'text-slate-500' : ''}>
               {getSportsDisplayText()}
             </span>
             <svg
-              className={`w-4 h-4 transition-transform ${showSportsDropdown ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 transition-transform text-slate-400 ${showSportsDropdown ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -198,21 +198,21 @@ export default function Controls(props: ControlsProps) {
                 className="fixed inset-0 z-10"
                 onClick={() => setShowSportsDropdown(false)}
               />
-              <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+              <div className="absolute z-20 w-full mt-1 bg-[#1e293b] border border-slate-700/50 rounded-md shadow-xl max-h-48 overflow-y-auto">
                 <div className="p-2 space-y-1">
                   {SPORTS.map((sport) => (
                     <label
                       key={sport.id}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer rounded"
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-slate-700/30 cursor-pointer rounded"
                     >
                       <input
                         type="checkbox"
                         checked={selectedSports.includes(sport.id)}
                         onChange={() => toggleSport(sport.id)}
                         disabled={isLoading}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="w-4 h-4 text-green-500 border-slate-600 rounded bg-slate-800 focus:ring-green-500"
                       />
-                      <span className="text-sm text-gray-700">{sport.label}</span>
+                      <span className="text-sm text-slate-200">{sport.label}</span>
                     </label>
                   ))}
                 </div>
@@ -221,86 +221,28 @@ export default function Controls(props: ControlsProps) {
           )}
         </div>
 
-        <div className="space-y-3">
-          <div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={onlyClubs}
-                onChange={(e) => onOnlyClubsChange(e.target.checked)}
-                disabled={isLoading}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Only clubs / teams
-              </span>
-            </label>
-            <p className="text-xs text-gray-500 mt-1 ml-6">
-              {onlyClubs 
-                ? 'Showing only competitive clubs and teams' 
-                : 'Showing all venues, ranked by club confidence'}
-            </p>
-          </div>
-
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Age Groups
-            </label>
-            <button
-              type="button"
-              onClick={() => setShowAgeGroupsDropdown(!showAgeGroupsDropdown)}
+        {/* Toggles - Horizontal */}
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={onlyClubs}
+              onChange={(e) => onOnlyClubsChange(e.target.checked)}
               disabled={isLoading}
-              className="w-full px-4 py-2 border rounded-md text-left bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex items-center justify-between disabled:bg-gray-50 disabled:cursor-not-allowed"
-            >
-              <span className={selectedAgeGroups.length === 0 ? 'text-gray-500' : ''}>
-                {getAgeGroupsDisplayText()}
-              </span>
-              <svg
-                className={`w-4 h-4 transition-transform ${showAgeGroupsDropdown ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {showAgeGroupsDropdown && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowAgeGroupsDropdown(false)}
-                />
-                <div className="absolute z-20 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                  <div className="p-2 space-y-1">
-                    {AGE_GROUPS.map((ageGroup) => (
-                      <label
-                        key={ageGroup.id}
-                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer rounded"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedAgeGroups.includes(ageGroup.id)}
-                          onChange={() => toggleAgeGroup(ageGroup.id)}
-                          disabled={isLoading}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">{ageGroup.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+              className="w-4 h-4 text-green-500 border-slate-600 rounded bg-slate-800 focus:ring-green-500"
+            />
+            <span className="text-sm font-medium text-slate-300">
+              Prioritize Clubs / Teams
+            </span>
+          </label>
         </div>
 
         <button
           onClick={handleSearch}
           disabled={isSearchDisabled}
-          className="w-full px-6 py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
         >
-          {isLoading ? 'Searching...' : 'Search Sports Clubs'}
+          {isLoading ? 'Searching...' : 'Search'}
         </button>
       </div>
     </div>

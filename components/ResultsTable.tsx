@@ -156,213 +156,158 @@ export default function ResultsTable(props: ResultsTableProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Filters */}
-      <div className="p-4 border-b bg-gray-50 space-y-2">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 px-3 py-2 border rounded-md text-sm"
-          />
+    <div className="flex flex-col h-full bg-[#0f172a]">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-slate-800/50">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-200">Ranking</h2>
+          <button
+            onClick={onExport}
+            className="px-3 py-1.5 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md transition-colors"
+          >
+            Export CSV
+          </button>
+        </div>
+        <div className="text-xs text-slate-400 mt-1">
+          {filteredAndSorted.length} of {places.length} clubs
+        </div>
+      </div>
+      
+      {/* Search/Filter */}
+      <div className="px-4 py-2 border-b border-slate-800/50 space-y-2">
+        <input
+          type="text"
+          placeholder="Search clubs..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-3 py-1.5 bg-[#1e293b] border border-slate-700/50 rounded-md text-sm text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-slate-600 focus:border-slate-600"
+        />
+        {sports.length > 0 && (
           <select
             value={filterSport}
             onChange={(e) => setFilterSport(e.target.value)}
-            className="px-3 py-2 border rounded-md text-sm"
+            className="w-full px-3 py-1.5 bg-[#1e293b] border border-slate-700/50 rounded-md text-sm text-slate-100 focus:ring-1 focus:ring-slate-600 focus:border-slate-600"
           >
             <option value="all">All Sports</option>
             {sports.map(sport => (
               <option key={sport} value={sport}>{sport}</option>
             ))}
           </select>
-          <button
-            onClick={onExport}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-          >
-            Export CSV
-          </button>
-        </div>
-        <div className="text-sm text-gray-600">
-          Showing {filteredAndSorted.length} of {places.length} places
-        </div>
+        )}
       </div>
 
-      {/* Table */}
+      {/* Ranking List */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-100 sticky top-0">
-            <tr>
-              <th
-                className="px-4 py-2 text-left cursor-pointer hover:bg-gray-200"
-                onClick={() => handleSort('name')}
+        <div className="space-y-0.5">
+          {filteredAndSorted.map((place, index) => {
+            // Safety guard: ensure name is a string
+            const displayName = typeof place.name === 'string' ? place.name : '';
+            const clubScore = place.clubScore ?? 0;
+            const isSelected = selectedPlaceId === place.place_id;
+            
+            // Confidence badge
+            let confidenceBadge: JSX.Element;
+            if (clubScore >= 4) {
+              confidenceBadge = <span className="text-xs font-medium accent-green">Club</span>;
+            } else if (clubScore >= 2) {
+              confidenceBadge = <span className="text-xs font-medium accent-yellow">Possible</span>;
+            } else {
+              confidenceBadge = <span className="text-xs font-medium accent-gray">Venue</span>;
+            }
+            
+            // Age group badges
+            const ageBadges: JSX.Element[] = [];
+            if (place.ageGroups) {
+              if (place.ageGroups.youth >= 2) {
+                ageBadges.push(<span key="youth" className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">Youth</span>);
+              }
+              if (place.ageGroups.highSchool >= 2) {
+                ageBadges.push(<span key="hs" className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">HS</span>);
+              }
+              if (place.ageGroups.elite >= 2) {
+                ageBadges.push(<span key="elite" className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400">Elite</span>);
+              }
+              if (place.ageGroups.adult >= 2) {
+                ageBadges.push(<span key="adult" className="text-xs px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-400">Adult</span>);
+              }
+            }
+            
+            return (
+              <div
+                key={place.place_id}
+                onClick={() => onPlaceClick(place.place_id)}
+                className={`px-4 py-3 border-b border-slate-800/30 cursor-pointer transition-colors ${
+                  isSelected 
+                    ? 'bg-slate-800/50 border-l-2 border-l-green-500' 
+                    : 'hover:bg-slate-800/30'
+                }`}
               >
-                Club Name <SortIcon field="name" />
-              </th>
-              <th className="px-4 py-2 text-left">Club Confidence</th>
-              <th
-                className="px-4 py-2 text-left cursor-pointer hover:bg-gray-200"
-                onClick={() => handleSort('sport')}
-              >
-                Sport <SortIcon field="sport" />
-              </th>
-              <th
-                className="px-4 py-2 text-left cursor-pointer hover:bg-gray-200"
-                onClick={() => handleSort('driveTime')}
-              >
-                Drive Time <SortIcon field="driveTime" />
-              </th>
-              <th
-                className="px-4 py-2 text-left cursor-pointer hover:bg-gray-200"
-                onClick={() => handleSort('distance')}
-              >
-                Distance <SortIcon field="distance" />
-              </th>
-              <th className="px-4 py-2 text-left">Address</th>
-              <th className="px-4 py-2 text-left">Phone</th>
-              <th className="px-4 py-2 text-left">Website</th>
-              <th
-                className="px-4 py-2 text-left cursor-pointer hover:bg-gray-200"
-                onClick={() => handleSort('rating')}
-              >
-                Rating <SortIcon field="rating" />
-              </th>
-              <th
-                className="px-4 py-2 text-left cursor-pointer hover:bg-gray-200"
-                onClick={() => handleSort('review_count')}
-              >
-                Reviews <SortIcon field="review_count" />
-              </th>
-              <th className="px-4 py-2 text-left">Notes</th>
-              <th className="px-4 py-2 text-left">Tags</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredAndSorted.map((place) => {
-              // Safety guard: ensure name is a string (should already be converted from displayName.text)
-              const displayName = typeof place.name === 'string' ? place.name : '';
-              
-              return (
-                <tr
-                  key={place.place_id}
-                  onClick={() => onPlaceClick(place.place_id)}
-                  className={`border-b hover:bg-blue-50 cursor-pointer ${
-                    selectedPlaceId === place.place_id ? 'bg-blue-100' : ''
-                  }`}
-                >
-                  <td className="px-4 py-2 font-medium">
-                    <div className="flex items-center gap-2">
-                      <span>{displayName}</span>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-slate-400 w-6">{index + 1}</span>
+                      <h3 className="font-semibold text-slate-100 text-sm truncate">{displayName}</h3>
                       {place.isClub && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                          Club
-                        </span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">Club</span>
                       )}
                     </div>
-                    {place.ageGroups && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {place.ageGroups.youth >= 2 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
-                            🟢 Youth
-                          </span>
-                        )}
-                        {place.ageGroups.highSchool >= 2 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-purple-100 text-purple-800">
-                            🔵 High School
-                          </span>
-                        )}
-                        {place.ageGroups.elite >= 2 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-indigo-100 text-indigo-800">
-                            🟣 Elite
-                          </span>
-                        )}
-                        {place.ageGroups.adult >= 2 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-800">
-                            ⚪ Adult
-                          </span>
-                        )}
+                    
+                    {/* Age badges */}
+                    {ageBadges.length > 0 && (
+                      <div className="flex flex-wrap gap-1 ml-8 mb-1.5">
+                        {ageBadges}
                       </div>
                     )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {(() => {
-                      const score = place.clubScore ?? 0;
-                      if (score >= 4) {
-                        return <span className="text-green-600 font-medium">✅ Club</span>;
-                      } else if (score >= 2) {
-                        return <span className="text-yellow-600 font-medium">⚠️ Possible</span>;
-                      } else {
-                        return <span className="text-gray-500">⚪ Venue</span>;
-                      }
-                    })()}
-                  </td>
-                <td className="px-4 py-2">{place.sport || '-'}</td>
-                <td className="px-4 py-2">
-                  {place.driveTime !== null && place.driveTime !== undefined
-                    ? `${place.driveTime} min`
-                    : '-'}
-                </td>
-                <td className="px-4 py-2">
-                  {place.distance !== null && place.distance !== undefined
-                    ? `${place.distance.toFixed(1)} mi`
-                    : '-'}
-                </td>
-                <td className="px-4 py-2">{place.address}</td>
-                <td className="px-4 py-2">{place.phone || '-'}</td>
-                <td className="px-4 py-2">
-                  {place.website ? (
-                    <a
-                      href={place.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Visit
-                    </a>
-                  ) : (
-                    '-'
-                  )}
-                </td>
-                <td className="px-4 py-2">
-                  {place.rating !== null && place.rating !== undefined
-                    ? place.rating.toFixed(1)
-                    : '-'}
-                </td>
-                <td className="px-4 py-2">
-                  {place.review_count !== null && place.review_count !== undefined
-                    ? place.review_count.toLocaleString()
-                    : '-'}
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="text"
-                    value={notes[place.place_id] || ''}
-                    onChange={(e) => onNotesChange(place.place_id, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    placeholder="Add notes..."
-                    className="w-full px-2 py-1 border rounded text-xs"
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="text"
-                    value={tags[place.place_id] || ''}
-                    onChange={(e) => onTagsChange(place.place_id, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    placeholder="Add tags..."
-                    className="w-full px-2 py-1 border rounded text-xs"
-                  />
-                </td>
-              </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    
+                    {/* Key metrics */}
+                    <div className="flex items-center gap-4 ml-8 text-xs text-slate-400">
+                      {place.driveTime !== null && place.driveTime !== undefined && (
+                        <span>
+                          <span className="font-semibold text-slate-300">{place.driveTime}</span> min
+                        </span>
+                      )}
+                      {place.distance !== null && place.distance !== undefined && (
+                        <span>
+                          <span className="font-semibold text-slate-300">{place.distance.toFixed(1)}</span> mi
+                        </span>
+                      )}
+                      {place.rating && (
+                        <span>
+                          <span className="font-semibold text-slate-300">{place.rating.toFixed(1)}</span> ⭐
+                        </span>
+                      )}
+                      {place.website && (
+                        <a
+                          href={place.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-slate-400 hover:text-slate-200"
+                        >
+                          ↗
+                        </a>
+                      )}
+                    </div>
+                    
+                    {/* Address */}
+                    <div className="text-xs text-slate-500 ml-8 mt-0.5 truncate">
+                      {place.address}
+                    </div>
+                  </div>
+                  
+                  {/* Confidence badge - right aligned */}
+                  <div className="flex-shrink-0">
+                    {confidenceBadge}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
         {filteredAndSorted.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
-            No places found. Try adjusting your filters.
+          <div className="p-8 text-center text-slate-500 text-sm">
+            No clubs found. Try adjusting your filters.
           </div>
         )}
       </div>

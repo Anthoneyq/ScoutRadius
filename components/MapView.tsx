@@ -12,6 +12,8 @@ interface Place {
   sport?: string;
   driveTime?: number;
   distance?: number;
+  clubScore?: number;
+  isClub?: boolean;
 }
 
 interface MapViewProps {
@@ -58,7 +60,7 @@ export default function MapView(props: MapViewProps) {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: 'mapbox://styles/mapbox/dark-v11', // Dark theme map
       center: [-122.4194, 37.7749], // Default center, will update via flyTo
       zoom: 10,
     });
@@ -100,12 +102,12 @@ export default function MapView(props: MapViewProps) {
     // Add origin marker
     const el = document.createElement('div');
     el.className = 'origin-marker';
-    el.style.width = '20px';
-    el.style.height = '20px';
+    el.style.width = '18px';
+    el.style.height = '18px';
     el.style.borderRadius = '50%';
-    el.style.backgroundColor = '#3b82f6';
+    el.style.backgroundColor = '#6366f1'; // Indigo for origin
     el.style.border = '3px solid white';
-    el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+    el.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.3), 0 2px 4px rgba(0,0,0,0.4)';
     el.style.cursor = 'pointer';
 
     originMarkerRef.current = new mapboxgl.Marker(el)
@@ -132,8 +134,8 @@ export default function MapView(props: MapViewProps) {
         type: 'fill',
         source: 'isochrone',
         paint: {
-          'fill-color': '#3b82f6',
-          'fill-opacity': 0.2,
+          'fill-color': '#eab308', // Yellow for drive-time polygon
+          'fill-opacity': 0.15, // More subtle
         },
       });
 
@@ -142,8 +144,9 @@ export default function MapView(props: MapViewProps) {
         type: 'line',
         source: 'isochrone',
         paint: {
-          'line-color': '#3b82f6',
+          'line-color': '#eab308',
           'line-width': 2,
+          'line-opacity': 0.6,
         },
       });
     }
@@ -171,31 +174,60 @@ export default function MapView(props: MapViewProps) {
         // Update existing marker
         existingMarker.setLngLat([place.location.lng, place.location.lat]);
         
-        // Update marker appearance for selection
+        // Update marker appearance for selection and confidence
         const el = existingMarker.getElement();
         if (el) {
-          if (isSelected) {
-            el.style.width = '24px';
-            el.style.height = '24px';
-            el.style.zIndex = '1000';
-            el.style.backgroundColor = '#ef4444';
+          const clubScore = place.clubScore ?? 0;
+          let markerColor: string;
+          let markerSize: number;
+          
+          if (clubScore >= 4) {
+            markerColor = '#22c55e'; // Green
+            markerSize = isSelected ? 20 : 14;
+          } else if (clubScore >= 2) {
+            markerColor = '#eab308'; // Yellow
+            markerSize = isSelected ? 18 : 12;
           } else {
-            el.style.width = '16px';
-            el.style.height = '16px';
-            el.style.zIndex = '1';
-            el.style.backgroundColor = '#10b981';
+            markerColor = '#94a3b8'; // Gray
+            markerSize = isSelected ? 16 : 10;
           }
+          
+          el.style.width = `${markerSize}px`;
+          el.style.height = `${markerSize}px`;
+          el.style.backgroundColor = markerColor;
+          el.style.zIndex = isSelected ? '1000' : '1';
+          el.style.border = isSelected ? '3px solid white' : '2px solid rgba(255,255,255,0.8)';
+          el.style.boxShadow = isSelected 
+            ? '0 0 0 4px rgba(34, 197, 94, 0.3), 0 2px 8px rgba(0,0,0,0.4)' 
+            : '0 2px 4px rgba(0,0,0,0.3)';
         }
       } else {
-        // Create new marker
+        // Create new marker with confidence-based color
+        const clubScore = place.clubScore ?? 0;
+        let markerColor: string;
+        let markerSize: number;
+        
+        if (clubScore >= 4) {
+          markerColor = '#22c55e'; // Green - high confidence
+          markerSize = isSelected ? 20 : 14;
+        } else if (clubScore >= 2) {
+          markerColor = '#eab308'; // Yellow - mixed
+          markerSize = isSelected ? 18 : 12;
+        } else {
+          markerColor = '#94a3b8'; // Gray - uncertain/recreational
+          markerSize = isSelected ? 16 : 10;
+        }
+        
         const el = document.createElement('div');
         el.className = 'place-marker';
-        el.style.width = isSelected ? '24px' : '16px';
-        el.style.height = isSelected ? '24px' : '16px';
+        el.style.width = `${markerSize}px`;
+        el.style.height = `${markerSize}px`;
         el.style.borderRadius = '50%';
-        el.style.backgroundColor = isSelected ? '#ef4444' : '#10b981';
-        el.style.border = '2px solid white';
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+        el.style.backgroundColor = markerColor;
+        el.style.border = isSelected ? '3px solid white' : '2px solid rgba(255,255,255,0.8)';
+        el.style.boxShadow = isSelected 
+          ? '0 0 0 4px rgba(34, 197, 94, 0.3), 0 2px 8px rgba(0,0,0,0.4)' 
+          : '0 2px 4px rgba(0,0,0,0.3)';
         el.style.cursor = 'pointer';
         el.style.transition = 'all 0.2s';
 
@@ -213,17 +245,17 @@ export default function MapView(props: MapViewProps) {
   }, [places, selectedPlaceId, isLoaded]);
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative bg-[#0f172a]">
       <div ref={mapContainer} className="w-full h-full" />
       {mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-4 border border-red-200">
-            <h3 className="text-lg font-semibold text-red-600 mb-2">Map Error</h3>
-            <p className="text-sm text-gray-700 mb-4">{mapError}</p>
-            <p className="text-xs text-gray-500">
-              Add your Mapbox token to <code className="bg-gray-100 px-1 rounded">.env.local</code>:
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0f172a]/95 z-10">
+          <div className="bg-[#1e293b] p-6 rounded-lg shadow-xl max-w-md mx-4 border border-slate-700/50">
+            <h3 className="text-lg font-semibold text-red-400 mb-2">Map Error</h3>
+            <p className="text-sm text-slate-300 mb-4">{mapError}</p>
+            <p className="text-xs text-slate-400">
+              Add your Mapbox token to <code className="bg-slate-800 px-1 rounded text-slate-200">.env.local</code>:
               <br />
-              <code className="bg-gray-100 px-1 rounded">NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your_token</code>
+              <code className="bg-slate-800 px-1 rounded text-slate-200">NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your_token</code>
             </p>
           </div>
         </div>
@@ -232,10 +264,17 @@ export default function MapView(props: MapViewProps) {
         .mapboxgl-popup-content {
           padding: 12px;
           font-family: system-ui, -apple-system, sans-serif;
+          background-color: #1e293b;
+          color: #e2e8f0;
+          border: 1px solid rgba(148, 163, 184, 0.1);
         }
         .mapboxgl-popup-close-button {
           font-size: 20px;
           padding: 4px 8px;
+          color: #94a3b8;
+        }
+        .mapboxgl-popup-close-button:hover {
+          color: #e2e8f0;
         }
       `}</style>
     </div>

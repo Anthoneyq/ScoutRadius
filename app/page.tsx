@@ -197,13 +197,25 @@ export default function Home() {
     downloadCSV(csv, filename);
   }, [places, notes, tags]);
 
+  // Calculate summary stats
+  const totalClubs = places.length;
+  const highConfidenceClubs = places.filter(p => (p.clubScore ?? 0) >= 4).length;
+  const avgDriveTime = places.length > 0
+    ? Math.round(places.reduce((sum, p) => sum + (p.driveTime ?? 0), 0) / places.length)
+    : 0;
+  const youthFocused = places.filter(p => (p.ageGroups?.youth ?? 0) >= 2).length;
+  const youthFocusedPercent = totalClubs > 0 ? Math.round((youthFocused / totalClubs) * 100) : 0;
+  const mixedRecreational = places.filter(p => (p.clubScore ?? 0) < 3).length;
+  const mixedRecreationalPercent = totalClubs > 0 ? Math.round((mixedRecreational / totalClubs) * 100) : 0;
+
   return (
-    <div className="h-screen flex flex-col">
-      <header className="bg-blue-600 text-white px-6 py-4 shadow-md">
-        <h1 className="text-2xl font-bold">ScoutRadius</h1>
-        <p className="text-sm text-blue-100">Find sports clubs within drive time</p>
+    <div className="h-screen flex flex-col bg-[#0f172a] text-slate-200">
+      {/* Minimal header */}
+      <header className="px-6 py-3 border-b border-slate-800/50">
+        <h1 className="text-xl font-semibold text-slate-100">ScoutRadius</h1>
       </header>
 
+      {/* Controls Panel - Horizontal, Simplified */}
       <Controls 
         onSearch={handleSearch} 
         isLoading={isLoading}
@@ -213,8 +225,45 @@ export default function Home() {
         onAgeGroupsChange={setSelectedAgeGroups}
       />
 
+      {/* Scout Summary Header */}
+      {totalClubs > 0 && (
+        <div className="px-6 py-4 border-b border-slate-800/50">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="card-dark rounded-lg px-4 py-3">
+              <div className="text-3xl font-semibold text-numeric text-slate-100">{totalClubs}</div>
+              <div className="text-xs text-slate-400 mt-1">Total Clubs</div>
+            </div>
+            <div className="card-dark rounded-lg px-4 py-3">
+              <div className="text-3xl font-semibold text-numeric accent-green">{highConfidenceClubs}</div>
+              <div className="text-xs text-slate-400 mt-1">High-Confidence</div>
+            </div>
+            <div className="card-dark rounded-lg px-4 py-3">
+              <div className="text-3xl font-semibold text-numeric text-slate-100">{avgDriveTime}</div>
+              <div className="text-xs text-slate-400 mt-1">Avg Drive Time</div>
+              <div className="text-xs text-slate-500 mt-0.5">minutes</div>
+            </div>
+            <div className="card-dark rounded-lg px-4 py-3">
+              <div className="text-3xl font-semibold text-numeric text-slate-100">{youthFocusedPercent}%</div>
+              <div className="text-xs text-slate-400 mt-1">Youth-Focused</div>
+            </div>
+            <div className="card-dark rounded-lg px-4 py-3">
+              <div className="text-3xl font-semibold text-numeric accent-gray">{mixedRecreationalPercent}%</div>
+              <div className="text-xs text-slate-400 mt-1">Mixed / Rec</div>
+            </div>
+            {onlyClubs && (
+              <div className="card-dark rounded-lg px-4 py-3 border-l-2 border-green-500/50">
+                <div className="text-sm font-medium text-slate-300">Sorted by</div>
+                <div className="text-xs text-slate-400 mt-0.5">Club Confidence</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Main Content: Map + Table */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-1/2 border-r h-full">
+        {/* Map - Increased height, dominates visually */}
+        <div className="flex-[1.3] border-r border-slate-800/50 h-full">
           <MapView
             origin={origin}
             places={places}
@@ -224,7 +273,8 @@ export default function Home() {
           />
         </div>
 
-        <div className="w-1/2 overflow-hidden">
+        {/* Results Table - Right Panel */}
+        <div className="flex-1 overflow-hidden bg-[#0f172a]">
           <ResultsTable
             places={places}
             selectedPlaceId={selectedPlaceId}

@@ -12,6 +12,7 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  height: 100%;
 }
 
 body {
@@ -20,4 +21,32 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #0f172a; /* Very dark blue/charcoal */
+  color: #e2e8f0; /* Light gray text */
+}
+
+/* Dark theme utilities */
+@layer utilities {
+  .text-numeric {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  
+  .card-dark {
+    background-color: #1e293b; /* Slightly lighter than background */
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+  
+  .accent-green {
+    color: #22c55e; /* Green for high confidence */
+  }
+  
+  .accent-yellow {
+    color: #eab308; /* Yellow for mixed */
+  }
+  
+  .accent-gray {
+    color: #94a3b8; /* Gray for neutral/uncertain */
+  }
 }
