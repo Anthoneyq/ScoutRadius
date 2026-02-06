@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import Stripe from 'stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
+// Lazy initialization - only create Stripe client when needed
+function getStripe() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error('STRIPE_SECRET_KEY is not set');
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2026-01-28.clover',
+  });
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2026-01-28.clover',
-});
 
 /**
  * POST /api/stripe/checkout - Create Stripe checkout session for Pro plan
@@ -29,6 +32,7 @@ export async function POST(request: NextRequest) {
     const priceId = process.env.STRIPE_PRO_PRICE_ID || 'price_placeholder';
 
     // Create checkout session
+    const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],

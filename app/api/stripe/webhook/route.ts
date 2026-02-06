@@ -3,13 +3,16 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { updateUserPlan } from '@/lib/db';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
+// Lazy initialization - only create Stripe client when needed
+function getStripe() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error('STRIPE_SECRET_KEY is not set');
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2026-01-28.clover',
+  });
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2026-01-28.clover',
-});
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
@@ -31,6 +34,7 @@ export async function POST(request: NextRequest) {
   let event: Stripe.Event;
 
   try {
+    const stripe = getStripe();
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err: any) {
     console.error('[Stripe Webhook] Signature verification failed:', err.message);
@@ -48,6 +52,7 @@ export async function POST(request: NextRequest) {
       
       if (userId && session.subscription) {
         // Get subscription details
+        const stripe = getStripe();
         const subscription = await stripe.subscriptions.retrieve(
           session.subscription as string
         );
