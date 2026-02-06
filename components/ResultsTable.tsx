@@ -86,14 +86,16 @@ export default function ResultsTable(props: ResultsTableProps) {
       return true;
     });
     
-    // Sort by clubScore descending (highest confidence first)
+    // Sort: primary by clubScore (descending), secondary by selected field
     filtered.sort((a, b) => {
+      // Primary sort: clubScore (highest confidence first)
       const scoreA = a.clubScore ?? 0;
       const scoreB = b.clubScore ?? 0;
-      return scoreB - scoreA;
-    });
-
-    filtered.sort((a, b) => {
+      if (scoreA !== scoreB) {
+        return scoreB - scoreA; // Descending
+      }
+      
+      // Secondary sort: by selected field
       let aVal: any = a[sortField];
       let bVal: any = b[sortField];
 
@@ -111,28 +113,6 @@ export default function ResultsTable(props: ResultsTableProps) {
         return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
       }
     });
-
-    // Apply secondary sort by the selected sort field
-    if (sortField !== 'name') {
-      filtered.sort((a, b) => {
-        let aVal: any = a[sortField];
-        let bVal: any = b[sortField];
-
-        if (aVal === null || aVal === undefined) aVal = sortDirection === 'asc' ? Infinity : -Infinity;
-        if (bVal === null || bVal === undefined) bVal = sortDirection === 'asc' ? Infinity : -Infinity;
-
-        if (typeof aVal === 'string') {
-          aVal = aVal.toLowerCase();
-          bVal = bVal.toLowerCase();
-        }
-
-        if (sortDirection === 'asc') {
-          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
-        } else {
-          return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
-        }
-      });
-    }
 
     return filtered;
   }, [places, sortField, sortDirection, filterSport, searchQuery, onlyClubs]);
