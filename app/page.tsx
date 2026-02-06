@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import MapView from '@/components/MapView';
 import ResultsTable from '@/components/ResultsTable';
 import Controls from '@/components/Controls';
+import UsageDisplay from '@/components/UsageDisplay';
+import AuthButton from '@/components/AuthButton';
 import { arrayToCSV, downloadCSV } from '@/lib/csv';
 import { Place } from '@/lib/googlePlaces';
 
@@ -18,8 +20,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tags, setTags] = useState<Record<string, string>>({});
-  const [onlyClubs, setOnlyClubs] = useState(false);
-  const [showRecreational, setShowRecreational] = useState(false); // Default to hiding recreational
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
   
   // Track if we're loading from localStorage to prevent save loops
@@ -231,19 +231,19 @@ export default function Home() {
         <div className="px-6 py-3">
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
+            <AuthButton />
           </div>
           <Controls 
             onSearch={handleSearch} 
             isLoading={isLoading}
-            onlyClubs={onlyClubs}
-            onOnlyClubsChange={setOnlyClubs}
-            showRecreational={showRecreational}
-            onShowRecreationalChange={setShowRecreational}
             selectedAgeGroups={selectedAgeGroups}
             onAgeGroupsChange={setSelectedAgeGroups}
           />
         </div>
       </div>
+
+      {/* USAGE DISPLAY — luxury overlay */}
+      <UsageDisplay />
 
       {/* LEFT STATS CARDS — luxury overlay, floating */}
       <div className="absolute left-5 top-32 z-20 space-y-3 pointer-events-none">
@@ -286,16 +286,12 @@ export default function Home() {
             onNotesChange={handleNotesChange}
             onTagsChange={handleTagsChange}
             onExport={handleExport}
-            onlyClubs={onlyClubs}
-            showRecreational={showRecreational}
             selectedAgeGroups={selectedAgeGroups}
             totalClubs={totalClubs}
             highConfidenceClubs={highConfidenceClubs}
             avgDriveTime={avgDriveTime}
             youthFocusedPercent={youthFocusedPercent}
             mixedRecreationalPercent={mixedRecreationalPercent}
-            onlyClubsActive={onlyClubs}
-            recreationalHidden={!showRecreational}
           />
         </div>
       </div>

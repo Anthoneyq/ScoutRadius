@@ -216,7 +216,7 @@ export default function MapView(props: MapViewProps) {
           const clubScore = place.clubScore ?? 0;
           let markerColor: string;
           let markerSize: number;
-          let markerOpacity = '1';
+          const markerOpacity = '1'; // Always full opacity
           
           // Luxury confidence tier colors - BRIGHTER for visibility
           if (clubScore >= 80) {
@@ -231,19 +231,38 @@ export default function MapView(props: MapViewProps) {
           } else {
             markerColor = '#64748b'; // Brighter slate - Basic (was #475569, was opacity 0.6)
             markerSize = isSelected ? 16 : 10;
-            markerOpacity = '1'; // Full opacity - no dimming
           }
           
+          // Convert nested structure to simple if needed (for old markers)
+          const innerCircle = el.querySelector('.marker-inner') as HTMLElement;
+          if (innerCircle) {
+            // Remove nested structure - copy styles to parent and remove inner
+            el.style.backgroundColor = innerCircle.style.backgroundColor || markerColor;
+            el.style.opacity = innerCircle.style.opacity || markerOpacity;
+            el.style.border = innerCircle.style.border || (isSelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)');
+            el.style.boxShadow = innerCircle.style.boxShadow || (isSelected 
+              ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
+              : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)');
+            el.style.display = 'block';
+            el.style.alignItems = '';
+            el.style.justifyContent = '';
+            innerCircle.remove();
+          }
+          
+          // Store state on element for hover handlers
+          el.setAttribute('data-original-opacity', markerOpacity);
+          el.setAttribute('data-is-selected', isSelected ? 'true' : 'false');
+          
+          // Update marker appearance
           el.style.width = `${markerSize}px`;
           el.style.height = `${markerSize}px`;
           el.style.backgroundColor = markerColor;
           el.style.opacity = markerOpacity;
-          el.style.zIndex = isSelected ? '1000' : '10'; // Higher z-index so markers stay visible
-          el.style.border = isSelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)'; // Brighter border
+          el.style.border = isSelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)';
           el.style.boxShadow = isSelected 
             ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
-            : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)'; // Brighter shadow with white glow
-          el.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
+            : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)';
+          el.style.zIndex = isSelected ? '1000' : '10';
         }
       } else {
         // Create new marker - flat, minimal circles (Pergamum-style)
@@ -268,6 +287,7 @@ export default function MapView(props: MapViewProps) {
           markerOpacity = '1'; // Full opacity - no dimming
         }
         
+        // Create marker element - simple single element, no nested structure
         const el = document.createElement('div');
         el.className = 'place-marker';
         el.style.width = `${markerSize}px`;
@@ -275,37 +295,52 @@ export default function MapView(props: MapViewProps) {
         el.style.borderRadius = '50%';
         el.style.backgroundColor = markerColor;
         el.style.opacity = markerOpacity;
-        el.style.zIndex = isSelected ? '1000' : '10'; // Higher z-index so markers stay visible
-        el.style.border = isSelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)'; // Brighter border
+        el.style.border = isSelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)';
         el.style.boxShadow = isSelected 
           ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
-          : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)'; // Brighter shadow with white glow
+          : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)';
         el.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
         el.style.cursor = 'pointer';
-        el.style.pointerEvents = 'auto'; // Ensure pointer events work
+        el.style.pointerEvents = 'auto';
+        el.style.position = 'relative';
+        el.style.zIndex = isSelected ? '1000' : '10';
 
-        const marker = new mapboxgl.Marker(el)
+        // Store state on element for hover handlers to read (prevents stale closure issues)
+        el.setAttribute('data-original-opacity', markerOpacity);
+        el.setAttribute('data-is-selected', isSelected ? 'true' : 'false');
+
+        const marker = new mapboxgl.Marker({
+          element: el,
+          anchor: 'center', // Center anchor prevents shifting
+        })
           .setLngLat([place.location.lng, place.location.lat])
           .addTo(map.current!);
 
-        el.addEventListener('click', () => {
+        // Click handler - stop propagation to prevent map interactions
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
           onPlaceClickRef.current(place.place_id);
         });
         
-        // Hover behavior - luxury amber glow (FIXED: ensure opacity stays at 1)
-        el.addEventListener('mouseenter', () => {
-          el.style.opacity = '1'; // Ensure full opacity on hover
-          el.style.zIndex = '100'; // Higher z-index on hover
-          el.style.boxShadow = '0 0 0 2px rgba(251, 191, 36, 0.5), 0 4px 16px rgba(0,0,0,0.7), 0 0 32px rgba(251, 191, 36, 0.3)';
-          el.style.transform = 'scale(1.15)'; // Slightly larger scale
+        // Hover behavior - NO transform to prevent positioning issues, only visual changes
+        el.addEventListener('mouseenter', (e) => {
+          e.stopPropagation();
+          el.style.opacity = '1';
+          el.style.zIndex = '100';
+          el.style.border = '3px solid rgba(251, 191, 36, 0.9)';
+          el.style.boxShadow = '0 0 0 3px rgba(251, 191, 36, 0.4), 0 4px 20px rgba(0,0,0,0.8), 0 0 40px rgba(251, 191, 36, 0.4)';
         });
-        el.addEventListener('mouseleave', () => {
-          el.style.opacity = markerOpacity; // Restore original opacity
-          el.style.zIndex = isSelected ? '1000' : '10'; // Restore z-index
-          el.style.boxShadow = isSelected 
+        el.addEventListener('mouseleave', (e) => {
+          e.stopPropagation();
+          const originalOpacity = el.getAttribute('data-original-opacity') || '1';
+          const isCurrentlySelected = el.getAttribute('data-is-selected') === 'true';
+          el.style.opacity = originalOpacity;
+          el.style.zIndex = isCurrentlySelected ? '1000' : '10';
+          el.style.border = isCurrentlySelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)';
+          el.style.boxShadow = isCurrentlySelected 
             ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
             : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)';
-          el.style.transform = 'scale(1)';
         });
 
         markersRef.current.set(place.place_id, marker);

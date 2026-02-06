@@ -33,16 +33,12 @@ interface ResultsTableProps {
   onNotesChange: (placeId: string, notes: string) => void;
   onTagsChange: (placeId: string, tags: string) => void;
   onExport: () => void;
-  onlyClubs: boolean; // Prioritize clubs when true (re-ranks, doesn't filter)
-  showRecreational: boolean; // Show recreational locations when true
   selectedAgeGroups: string[]; // Filter by age groups
   totalClubs?: number;
   highConfidenceClubs?: number;
   avgDriveTime?: number;
   youthFocusedPercent?: number;
   mixedRecreationalPercent?: number;
-  onlyClubsActive?: boolean;
-  recreationalHidden?: boolean;
 }
 
 type SortField = 'name' | 'sport' | 'driveTime' | 'distance' | 'rating' | 'review_count';
@@ -58,8 +54,6 @@ export default function ResultsTable(props: ResultsTableProps) {
     onNotesChange = () => {},
     onTagsChange = () => {},
     onExport = () => {},
-    onlyClubs = false,
-    showRecreational = true,
     selectedAgeGroups = [],
     totalClubs = 0,
     highConfidenceClubs = 0,
@@ -90,18 +84,6 @@ export default function ResultsTable(props: ResultsTableProps) {
     }
     
     let filtered = places.filter(place => {
-      // Filter by "show recreational" toggle
-      // When OFF, only hide places with negative scores (bars, restaurants) or very low scores (0)
-      // Keep places with score >= 1 to avoid filtering out legitimate venues
-      if (!showRecreational) {
-        const score = place.clubScore ?? 0;
-        // Only filter out truly recreational venues (score 0 or negative)
-        // Score 1+ indicates some club-like characteristics
-        if (score < 1) {
-          return false;
-        }
-      }
-      
       // Filter by age groups
       if (selectedAgeGroups.length > 0 && place.ageGroups) {
         const hasMatchingAgeGroup = selectedAgeGroups.some(ageGroupId => {
@@ -129,18 +111,8 @@ export default function ResultsTable(props: ResultsTableProps) {
       return true;
     });
     
-    // Sort: When "Prioritize Clubs" is ON, clubs float to top
-    // Otherwise: primary by clubScore (descending), secondary by drive time (ascending)
+    // Sort: primary by clubScore (descending), secondary by drive time (ascending)
     filtered.sort((a, b) => {
-      // If "Prioritize Clubs" toggle is ON, clubs always rank higher
-      if (onlyClubs) {
-        const aIsClub = a.isClub ?? false;
-        const bIsClub = b.isClub ?? false;
-        if (aIsClub !== bIsClub) {
-          return bIsClub ? 1 : -1; // Clubs first
-        }
-      }
-      
       // Primary sort: clubScore (highest confidence first)
       const scoreA = a.clubScore ?? 0;
       const scoreB = b.clubScore ?? 0;
@@ -175,7 +147,7 @@ export default function ResultsTable(props: ResultsTableProps) {
     });
 
     return filtered;
-  }, [places, sortField, sortDirection, filterSport, searchQuery, onlyClubs, showRecreational, selectedAgeGroups]);
+  }, [places, sortField, sortDirection, filterSport, searchQuery, selectedAgeGroups]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -206,22 +178,6 @@ export default function ResultsTable(props: ResultsTableProps) {
             EXPORT
           </button>
         </div>
-        
-        {/* Status indicators - luxury micro-labels */}
-        {(onlyClubsActive || recreationalHidden) && (
-          <div className="flex gap-3 mt-2.5">
-            {onlyClubsActive && (
-              <div className="text-[10px] text-label text-tertiary opacity-70">
-                SORTED BY CONFIDENCE
-              </div>
-            )}
-            {recreationalHidden && (
-              <div className="text-[10px] text-label text-tertiary opacity-70">
-                RECREATIONAL HIDDEN
-              </div>
-            )}
-          </div>
-        )}
       </div>
       
       {/* Search/Filter - luxury inputs */}

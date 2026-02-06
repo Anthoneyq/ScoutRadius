@@ -5,10 +5,6 @@ import { useState } from 'react';
 interface ControlsProps {
   onSearch: (origin: { lat: number; lng: number }, driveTime: number, sports: string[]) => void;
   isLoading: boolean;
-  onlyClubs: boolean;
-  onOnlyClubsChange: (onlyClubs: boolean) => void;
-  showRecreational: boolean;
-  onShowRecreationalChange: (show: boolean) => void;
   selectedAgeGroups: string[];
   onAgeGroupsChange: (ageGroups: string[]) => void;
 }
@@ -31,10 +27,6 @@ export default function Controls(props: ControlsProps) {
   const {
     onSearch = () => {},
     isLoading = false,
-    onlyClubs = false,
-    onOnlyClubsChange = () => {},
-    showRecreational = true,
-    onShowRecreationalChange = () => {},
     selectedAgeGroups = [],
     onAgeGroupsChange = () => {},
   } = props || {};
@@ -166,7 +158,7 @@ export default function Controls(props: ControlsProps) {
               const minutes = (i + 1) * 5;
               return (
                 <option key={minutes} value={minutes} className="bg-[#0f172a]">
-                  {minutes} <span className="text-label">MIN</span>
+                  {minutes} MIN
                 </option>
               );
             })}
@@ -223,34 +215,6 @@ export default function Controls(props: ControlsProps) {
               </div>
             </>
           )}
-        </div>
-
-        {/* Toggles - Luxury styling */}
-        <div className="flex items-center gap-6">
-          <label className="flex items-center gap-2.5 cursor-pointer transition-luxury hover:opacity-80">
-            <input
-              type="checkbox"
-              checked={onlyClubs}
-              onChange={(e) => onOnlyClubsChange(e.target.checked)}
-              disabled={isLoading}
-              className="w-4 h-4 accent-[#fbbf24] border-[#334155] rounded bg-[#0f172a]/50 focus:ring-[#fbbf24]/30 transition-luxury"
-            />
-            <span className="text-xs font-light text-label text-secondary">
-              PRIORITIZE CLUBS / TEAMS
-            </span>
-          </label>
-          <label className="flex items-center gap-2.5 cursor-pointer transition-luxury hover:opacity-80">
-            <input
-              type="checkbox"
-              checked={showRecreational}
-              onChange={(e) => onShowRecreationalChange(e.target.checked)}
-              disabled={isLoading}
-              className="w-4 h-4 accent-[#64748b] border-[#334155] rounded bg-[#0f172a]/50 focus:ring-[#64748b]/30 transition-luxury"
-            />
-            <span className="text-xs font-light text-label text-secondary">
-              SHOW RECREATIONAL
-            </span>
-          </label>
         </div>
 
         <button

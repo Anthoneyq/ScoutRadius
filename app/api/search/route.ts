@@ -7,6 +7,9 @@ import { point } from '@turf/helpers';
 import { queryOSMSportsFacilities, matchPlaceToOSM } from '@/lib/osmLookup';
 import { classifyPlaceWithAI } from '@/lib/aiClassifier';
 import { isRetailSportStore } from '@/lib/retailExclusions';
+import { canUseAI } from '@/lib/paywall';
+import { auth } from '@clerk/nextjs/server';
+import { getUserUsage, incrementAIUsage, incrementSearchUsage } from '@/lib/db';
 
 // FIXED: Expanded queries - rotate multiple queries per sport
 // Google Places (New) is stricter, need broader search terms
@@ -71,6 +74,20 @@ const EXCLUDED_KEYWORDS = [
 ];
 
 export async function POST(request: NextRequest) {
+  // Get user ID from Clerk auth
+  const { userId } = await auth();
+  
+  // Fetch user usage from database (or null if not authenticated)
+  const userUsage = userId ? await getUserUsage(userId) : null;
+  
+  // Increment search usage if authenticated
+  if (userId) {
+    try {
+      await incrementSearchUsage(userId);
+    } catch (error) {
+      console.error('[Search] Error incrementing search usage:', error);
+    }
+  }
   try {
     const body = await request.json();
     const { origin, sports, driveTimeMinutes, isochroneGeoJSON } = body;
@@ -225,7 +242,10 @@ export async function POST(request: NextRequest) {
                 (initialScore >= 40 && initialScore <= 70) || 
                 (!place.osmConfirmed && initialScore >= 20);
               
-              if (shouldRunAI && rawPlacesBeforeFiltering.length < 30) {
+              // Check paywall before running AI
+              const canUseAIFeature = canUseAI(userUsage);
+              
+              if (shouldRunAI && rawPlacesBeforeFiltering.length < 30 && canUseAIFeature) {
                 try {
                   const aiResult = await classifyPlaceWithAI({
                     name: place.name,
@@ -241,11 +261,23 @@ export async function POST(request: NextRequest) {
                     
                     // Recalculate score with AI signal
                     place.clubScore = getClubConfidence(place);
+                    
+                    // Increment usage counter in database
+                    if (userId) {
+                      try {
+                        await incrementAIUsage(userId);
+                      } catch (error) {
+                        console.error('[Search] Error incrementing AI usage:', error);
+                      }
+                    }
                   }
                 } catch (aiError) {
                   // Silently fail - AI is optional
                   console.debug(`[AI] Classification failed for "${place.name}":`, aiError);
                 }
+              } else if (shouldRunAI && !canUseAIFeature) {
+                // Log that AI was skipped due to paywall
+                console.debug(`[AI] Skipped classification for "${place.name}" - usage limit reached`);
               }
               
               // Set isClub flag based on final score

@@ -43,28 +43,17 @@ export async function classifyPlaceWithAI(input: {
 
     const context = contextParts.join("\n\n");
 
-    // Deterministic prompt - no creativity
-    const prompt = `You are classifying sports-related locations.
+    // Optimized prompt - minimal tokens for cost efficiency
+    const prompt = `Classify sports location. Return JSON only:
+{"classification":"competitive_club"|"recreational"|"private"|"retail"|"unknown","confidence":0.0-1.0}
 
-Determine whether this place is:
-1) competitive_club - Competitive youth / travel sports club
-2) recreational - Recreational facility (gym, rec center, park)
-3) private - Private residence / unrelated
-4) retail - Retail sporting goods store (Academy Sports, Dick's Sporting Goods, REI, Scheels, etc.)
-5) unknown - Cannot determine
+Types:
+- competitive_club: youth/travel sports club
+- recreational: gym/rec center/park
+- private: residence/unrelated
+- retail: sporting goods store (Academy, Dick's, REI, etc.)
+- unknown: cannot determine
 
-IMPORTANT: If the place is a retail sporting goods store (Academy, Dick's, REI, Scheels, Big 5, Sportsman's Warehouse, Bass Pro, Cabela's, Fleet Feet, Foot Locker, etc.),
-classify it as "retail" with high confidence.
-
-Use the name, website description, and reviews.
-
-Return JSON ONLY:
-{
-  "classification": "competitive_club" | "recreational" | "private" | "retail" | "unknown",
-  "confidence": 0.0-1.0
-}
-
-Place information:
 ${context}`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -86,7 +75,7 @@ ${context}`;
           },
         ],
         temperature: 0.1, // Low temperature for deterministic results
-        max_tokens: 100,
+        max_tokens: 50, // Reduced from 100 - JSON response is small
       }),
     });
 
