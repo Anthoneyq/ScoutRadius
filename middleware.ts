@@ -1,6 +1,17 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export default clerkMiddleware();
+// Conditionally apply Clerk middleware only if CLERK_SECRET_KEY is available
+// This prevents build failures when the key isn't set in Vercel environment variables
+const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+
+export default clerkSecretKey
+  ? clerkMiddleware()
+  : (req: NextRequest) => {
+      // No-op middleware when Clerk is not configured
+      return NextResponse.next();
+    };
 
 export const config = {
   matcher: [

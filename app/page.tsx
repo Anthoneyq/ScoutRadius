@@ -1,8 +1,5 @@
 'use client';
 
-// Mark page as dynamic since it uses Clerk hooks
-export const dynamic = 'force-dynamic';
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import MapView from '@/components/MapView';
