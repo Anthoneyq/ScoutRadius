@@ -13,13 +13,29 @@ interface UsageData {
 }
 
 export default function UsageDisplay() {
-  // Check if Clerk is configured
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  if (!publishableKey || publishableKey.trim() === '') {
+  // Check if Clerk is configured - must check before using hooks
+  if (typeof window === 'undefined') {
+    // Server-side: check env var
+    const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    if (!publishableKey || publishableKey.trim() === '') {
+      return null;
+    }
+  }
+  
+  let isSignedIn = false;
+  let isLoaded = false;
+  let user = null;
+  
+  try {
+    const userData = useUser();
+    isSignedIn = userData.isSignedIn ?? false;
+    isLoaded = userData.isLoaded ?? false;
+    user = userData.user ?? null;
+  } catch (error) {
+    // Clerk not configured - return null
     return null;
   }
   
-  const { user, isSignedIn, isLoaded } = useUser();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -127,4 +143,20 @@ export default function UsageDisplay() {
       )}
     </div>
   );
+}
+
+export default function UsageDisplay() {
+  // Check if Clerk is configured
+  if (typeof window !== 'undefined') {
+    // Client-side: ClerkProvider will handle this
+    return <UsageDisplayContent />;
+  }
+  
+  // Server-side: check env var
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  if (!publishableKey || publishableKey.trim() === '') {
+    return null;
+  }
+  
+  return <UsageDisplayContent />;
 }
