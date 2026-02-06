@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface ControlsProps {
-  onSearch: (origin: { lat: number; lng: number }, driveTime: number, sports: string[]) => void;
+  onSearch: (origin: { lat: number; lng: number }, driveTime: number, sports: string[], includeSchools?: boolean) => void;
   isLoading: boolean;
   selectedAgeGroups: string[];
   onAgeGroupsChange: (ageGroups: string[]) => void;
@@ -12,6 +12,7 @@ interface ControlsProps {
 const SPORTS = [
   { id: 'volleyball', label: 'Volleyball' },
   { id: 'track and field', label: 'Track & Field' },
+  { id: 'cross country', label: 'Cross Country' },
   { id: 'basketball', label: 'Basketball' },
   { id: 'softball', label: 'Softball' },
 ];
@@ -33,6 +34,7 @@ export default function Controls(props: ControlsProps) {
   const [locationInput, setLocationInput] = useState('');
   const [driveTime, setDriveTime] = useState(30); // Default to 30 minutes
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
+  const [includeSchools, setIncludeSchools] = useState(false);
   const [showSportsDropdown, setShowSportsDropdown] = useState(false);
   const [showAgeGroupsDropdown, setShowAgeGroupsDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -174,7 +176,7 @@ export default function Controls(props: ControlsProps) {
       }
     }
 
-    onSearch(origin, driveTime, selectedSports);
+    onSearch(origin, driveTime, selectedSports, includeSchools);
   };
 
   const isSearchDisabled = isLoading || !locationInput.trim() || selectedSports.length === 0;
@@ -280,6 +282,19 @@ export default function Controls(props: ControlsProps) {
               </div>
             </>
           )}
+        </div>
+
+        <div className="flex items-center gap-2 min-w-[140px]">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeSchools}
+              onChange={(e) => setIncludeSchools(e.target.checked)}
+              disabled={isLoading}
+              className="w-4 h-4 accent-[#fbbf24] border-[#334155] rounded bg-[#0f172a]/50 focus:ring-[#fbbf24]/30 transition-luxury"
+            />
+            <span className="text-xs font-light text-label text-tertiary">Include Schools</span>
+          </label>
         </div>
 
         <button

@@ -88,7 +88,8 @@ export default function Home() {
   const handleSearch = async (
     searchOrigin: { lat: number; lng: number },
     driveTime: number,
-    sports: string[]
+    sports: string[],
+    includeSchools?: boolean
   ) => {
     setIsLoading(true);
     setOrigin(searchOrigin);
@@ -116,6 +117,7 @@ export default function Home() {
           sports,
           driveTimeMinutes: driveTime,
           isochroneGeoJSON: isochroneData, // Pass the fetched isochrone for polygon filtering
+          includeSchools: includeSchools || false,
         }),
       });
 

@@ -50,6 +50,15 @@ const SPORT_KEYWORDS: Record<string, string[]> = {
     'softball training',
     'competitive softball',
   ],
+  'cross country': [
+    'cross country team',
+    'cross country club',
+    'cross country running',
+    'youth cross country',
+    'cross country training',
+    'running club',
+    'cross country program',
+  ],
 };
 
 // REMOVED: includedTypes completely
@@ -123,7 +132,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const { origin, sports, driveTimeMinutes, isochroneGeoJSON } = body;
+    const { origin, sports, driveTimeMinutes, isochroneGeoJSON, includeSchools = false } = body;
 
     if (!origin || !origin.lat || !origin.lng) {
       return NextResponse.json(
@@ -406,6 +415,122 @@ export async function POST(request: NextRequest) {
           const errorMessage = keywordError instanceof Error ? keywordError.message : String(keywordError);
           console.error(`Search failed for "${sport}" keyword "${keyword}": ${errorMessage}`);
           // Continue with other keywords - one failure shouldn't stop the entire search
+        }
+      }
+    }
+
+    // Search for schools if includeSchools is enabled
+    if (includeSchools) {
+      const schoolKeywords = [
+        'high school',
+        'middle school',
+        'elementary school',
+        'private school',
+        'public school',
+        'academy',
+        'preparatory school',
+      ];
+      
+      for (const keyword of schoolKeywords) {
+        try {
+          console.log(`[Search API] Searching for "${keyword}" (schools)`);
+          const results = await searchPlaces(
+            keyword,
+            { lat: origin.lat, lng: origin.lng },
+            radiusMeters,
+            apiKey,
+            undefined
+          );
+
+          totalResultsFound += results.length;
+          console.log(`[Search API] School keyword "${keyword}": ${results.length} raw results from Google Places`);
+          
+          // Process school results
+          for (const googlePlace of results) {
+            try {
+              // Check if place is a school by types or name
+              const placeName = googlePlace.displayName?.text || '';
+              const placeTypes = googlePlace.types || [];
+              const isSchool = 
+                placeTypes.some((type: string) => 
+                  type.includes('school') || 
+                  type.includes('educational')
+                ) ||
+                placeName.toLowerCase().includes('school') ||
+                placeName.toLowerCase().includes('academy') ||
+                placeName.toLowerCase().includes('preparatory');
+              
+              if (!isSchool) continue; // Skip non-schools
+              
+              // Use first sport or "school" as sport label
+              const sportLabel = sports.length > 0 ? sports[0] : 'school';
+              const place = convertGooglePlace(googlePlace, sportLabel);
+              
+              // Mark as school
+              place.isSchool = true;
+              
+              // HARD EXCLUSION: Retail sporting goods stores
+              if (isRetailSportStore({
+                name: place.name,
+                displayName: googlePlace.displayName,
+                website: place.website,
+              })) {
+                retailExcludedCount++;
+                continue;
+              }
+              
+              // Calculate club confidence (schools get higher base score)
+              const initialScore = getClubConfidence(place);
+              place.clubScore = initialScore + 20; // Boost for schools
+              place.isClub = true; // Schools are always considered clubs
+              
+              // Age groups - schools typically serve high school age
+              const ageGroups = getAgeGroupScores(place);
+              ageGroups.highSchool += 5; // Boost high school score for schools
+              place.ageGroups = ageGroups;
+              place.primaryAgeGroup = getPrimaryAgeGroup(ageGroups);
+              
+              // Filter by isochrone polygon if available
+              if (isochronePolygon) {
+                const placePoint = point([place.location.lng, place.location.lat]);
+                const isInside = booleanPointInPolygon(placePoint, isochronePolygon);
+                if (!isInside) continue;
+                totalResultsAfterPolygonFilter++;
+              }
+              
+              // Calculate drive time and distance
+              try {
+                const directions = await getDirections(
+                  [origin.lng, origin.lat],
+                  [place.location.lng, place.location.lat],
+                  mapboxToken
+                );
+
+                if (directions.routes && directions.routes.length > 0) {
+                  const route = directions.routes[0];
+                  const calculatedDriveTimeMinutes = Math.round(route.duration / 60);
+                  const distanceMiles = metersToMiles(route.distance);
+
+                  if (calculatedDriveTimeMinutes <= driveTimeMinutes + 1) {
+                    place.driveTime = calculatedDriveTimeMinutes;
+                    place.distance = distanceMiles;
+                    allPlaces.push(place);
+                    totalResultsAfterDriveTimeFilter++;
+                  }
+                }
+              } catch (dirError) {
+                if (isochronePolygon) {
+                  place.driveTime = undefined;
+                  place.distance = undefined;
+                  allPlaces.push(place);
+                }
+              }
+            } catch (convertError) {
+              console.error(`Failed to convert school result: ${convertError}`);
+            }
+          }
+        } catch (keywordError) {
+          console.error(`School search failed for "${keyword}": ${keywordError}`);
         }
       }
     }

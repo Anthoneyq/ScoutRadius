@@ -21,6 +21,7 @@ export interface Place {
   types?: string[]; // Place types from Google Places API
   clubScore?: number; // Club confidence score (0-10+)
   isClub?: boolean; // True if clubScore >= 3
+  isSchool?: boolean; // True if place is a school
   ageGroups?: {
     youth: number;
     highSchool: number;
