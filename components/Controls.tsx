@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface ControlsProps {
   onSearch: (origin: { lat: number; lng: number }, driveTime: number, sports: string[]) => void;
@@ -35,6 +35,8 @@ export default function Controls(props: ControlsProps) {
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [showSportsDropdown, setShowSportsDropdown] = useState(false);
   const [showAgeGroupsDropdown, setShowAgeGroupsDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const sportsButtonRef = useRef<HTMLButtonElement>(null);
 
   const toggleSport = (sportId: string) => {
     setSelectedSports(prev =>
@@ -67,6 +69,20 @@ export default function Controls(props: ControlsProps) {
         : [...selectedAgeGroups, ageGroupId]
     );
   };
+
+  // Calculate dropdown position when it opens
+  useEffect(() => {
+    if (showSportsDropdown && sportsButtonRef.current) {
+      const rect = sportsButtonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 6, // 6px = mt-1.5 equivalent
+        left: rect.left,
+        width: rect.width,
+      });
+    } else {
+      setDropdownPosition(null);
+    }
+  }, [showSportsDropdown]);
 
   const handleSearch = async () => {
     if (!locationInput.trim()) {
@@ -170,6 +186,7 @@ export default function Controls(props: ControlsProps) {
             SPORT
           </label>
           <button
+            ref={sportsButtonRef}
             type="button"
             onClick={() => setShowSportsDropdown(!showSportsDropdown)}
             disabled={isLoading}
@@ -188,13 +205,20 @@ export default function Controls(props: ControlsProps) {
             </svg>
           </button>
           
-          {showSportsDropdown && (
+          {showSportsDropdown && dropdownPosition && (
             <>
               <div
                 className="fixed inset-0 z-[90]"
                 onClick={() => setShowSportsDropdown(false)}
               />
-              <div className="absolute z-[100] w-full mt-1.5 bg-luxury-card border border-[#334155]/40 rounded-md shadow-2xl max-h-48 overflow-y-auto backdrop-blur-md">
+              <div 
+                className="fixed z-[100] bg-luxury-card border border-[#334155]/40 rounded-md shadow-2xl max-h-48 overflow-y-auto backdrop-blur-md"
+                style={{
+                  top: `${dropdownPosition.top}px`,
+                  left: `${dropdownPosition.left}px`,
+                  width: `${dropdownPosition.width}px`,
+                }}
+              >
                 <div className="p-2 space-y-1">
                   {SPORTS.map((sport) => (
                     <label

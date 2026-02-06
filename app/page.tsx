@@ -230,7 +230,7 @@ export default function Home() {
       </div>
 
       {/* TOP CONTROL BAR — luxury overlay */}
-      <div className="absolute top-0 left-0 right-0 z-20 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30">
+      <div className="absolute top-0 left-0 right-0 z-30 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
