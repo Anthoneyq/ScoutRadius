@@ -112,9 +112,17 @@ export async function POST(request: NextRequest) {
 
     // Search for each sport with expanded keywords
     const allPlaces: Place[] = [];
+    const rawPlacesBeforeFiltering: Place[] = []; // Collect raw places for debugging
     let totalResultsFound = 0;
     let totalResultsAfterPolygonFilter = 0;
     let totalResultsAfterDriveTimeFilter = 0;
+    
+    console.log(`=== STARTING SEARCH ===`);
+    console.log(`Origin: [${origin.lng}, ${origin.lat}]`);
+    console.log(`Drive time: ${driveTimeMinutes} minutes`);
+    console.log(`Radius: ${radiusMeters} meters`);
+    console.log(`Sports: ${sports.join(', ')}`);
+    console.log(`Has isochrone: ${!!isochroneGeoJSON}`);
     
     for (const sport of sports) {
       const keywords = SPORT_KEYWORDS[sport.toLowerCase()] || [`${sport} club`];
@@ -133,7 +141,12 @@ export async function POST(request: NextRequest) {
           totalResultsFound += results.length;
           console.log(`Found ${results.length} results for "${keyword}" (sport: ${sport})`);
           if (results.length > 0) {
-            console.log(`First result: ${results[0]?.displayName || results[0]?.name || 'unknown'}`);
+            const firstResult = results[0];
+            console.log(`First result: ${firstResult?.displayName || firstResult?.name || 'unknown'}`);
+            console.log(`First result location:`, {
+              geometry: firstResult?.geometry,
+              location: firstResult?.location,
+            });
           }
 
           // Convert and filter results
@@ -141,15 +154,26 @@ export async function POST(request: NextRequest) {
             try {
               const place = convertGooglePlace(googlePlace, sport);
               
+              // Collect raw place for debugging
+              rawPlacesBeforeFiltering.push(place);
+              
+              // TEMPORARY DEBUG: Log raw place before filtering
+              console.log(`Raw place: ${place.name} at [${place.location.lng}, ${place.location.lat}]`);
+              
               // Filter by isochrone polygon if available
               if (isochronePolygon) {
+                // CRITICAL: Turf.js expects [lng, lat] order
                 const placePoint = point([place.location.lng, place.location.lat]);
                 const isInside = booleanPointInPolygon(placePoint, isochronePolygon);
                 
+                console.log(`Place ${place.name}: polygon check = ${isInside}`);
+                
                 if (!isInside) {
+                  console.log(`Skipping ${place.name} - outside polygon`);
                   continue; // Skip places outside the isochrone
                 }
                 totalResultsAfterPolygonFilter++;
+                console.log(`Place ${place.name} passed polygon filter`);
               }
               
               // Calculate drive time and distance
@@ -202,12 +226,45 @@ export async function POST(request: NextRequest) {
     // Deduplicate by place_id
     const uniquePlaces = deduplicatePlaces(allPlaces);
 
-    console.log(`Search summary: Found ${totalResultsFound} total, ${totalResultsAfterPolygonFilter} after polygon filter, ${totalResultsAfterDriveTimeFilter} after drive time filter, ${uniquePlaces.length} unique places`);
+    const uniqueRawPlaces = deduplicatePlaces(rawPlacesBeforeFiltering);
+    console.log(`=== RAW PLACES COUNT (BEFORE ANY FILTERING): ${uniqueRawPlaces.length} ===`);
+    
+    console.log(`=== SEARCH SUMMARY ===`);
+    console.log(`Total results from Google: ${totalResultsFound}`);
+    console.log(`Raw places (before filtering): ${uniqueRawPlaces.length}`);
+    console.log(`After polygon filter: ${totalResultsAfterPolygonFilter}`);
+    console.log(`After drive time filter: ${totalResultsAfterDriveTimeFilter}`);
+    console.log(`Final unique places: ${uniquePlaces.length}`);
+    console.log(`Has isochrone polygon: ${!!isochronePolygon}`);
+    if (isochronePolygon) {
+      const polygonCoords = isochronePolygon.geometry.coordinates[0];
+      console.log(`Polygon first coord: [${polygonCoords[0][0]}, ${polygonCoords[0][1]}]`);
+      console.log(`Polygon coord count: ${polygonCoords.length}`);
+      console.log(`Origin: [${origin.lng}, ${origin.lat}]`);
+    }
+    console.log(`====================`);
+
+    // TEMPORARY: Return raw results if filtering removed everything
+    // This will show if Google Places is working but filtering is the issue
+    if (uniqueRawPlaces.length > 0 && uniquePlaces.length === 0) {
+      console.log('⚠️ WARNING: Found places but all filtered out. Returning first 5 raw places for debugging.');
+      const rawPlacesForTesting = uniqueRawPlaces.slice(0, 5);
+      return NextResponse.json({ 
+        places: rawPlacesForTesting, 
+        debug: { 
+          bypassedFiltering: true,
+          totalResultsFound: uniqueRawPlaces.length,
+          message: 'Returning raw results - filtering removed all places',
+          rawPlacesCount: uniqueRawPlaces.length,
+        } 
+      });
+    }
 
     return NextResponse.json({ 
       places: uniquePlaces,
       debug: {
         totalResultsFound,
+        rawPlacesCount: uniqueRawPlaces.length,
         totalResultsAfterPolygonFilter,
         totalResultsAfterDriveTimeFilter,
         uniquePlacesCount: uniquePlaces.length,
