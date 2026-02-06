@@ -73,6 +73,13 @@ export async function searchPlaces(
     maxResultCount: 50, // Increased for better coverage
   };
 
+  console.log('Google Places API request:', {
+    query,
+    location: { lat: location.lat, lng: location.lng },
+    radius: radiusMeters,
+    url: url.toString().substring(0, 50) + '...',
+  });
+
   const response = await fetch(url.toString(), {
     method: 'POST',
     headers: {
@@ -95,16 +102,18 @@ export async function searchPlaces(
       status: response.status,
       statusText: response.statusText,
       error: errorMessage,
-      url: url.toString(),
+      query,
     });
     throw new Error(errorMessage);
   }
 
   const data = await response.json();
   console.log('Google Places API response:', {
+    query,
     hasPlaces: !!data.places,
     placesCount: Array.isArray(data.places) ? data.places.length : 0,
     dataKeys: Object.keys(data),
+    firstPlaceName: data.places?.[0]?.displayName || data.places?.[0]?.name || 'none',
   });
   
   // Handle both array and object responses

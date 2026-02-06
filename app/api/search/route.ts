@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
       // Search with each keyword
       for (const keyword of keywords) {
         try {
+          console.log(`Searching for "${sport}" with keyword "${keyword}"`);
           const results = await searchPlaces(
             keyword,
             { lat: origin.lat, lng: origin.lng },
@@ -130,7 +131,10 @@ export async function POST(request: NextRequest) {
           );
 
           totalResultsFound += results.length;
-          console.log(`Found ${results.length} results for "${keyword}"`);
+          console.log(`Found ${results.length} results for "${keyword}" (sport: ${sport})`);
+          if (results.length > 0) {
+            console.log(`First result: ${results[0]?.displayName || results[0]?.name || 'unknown'}`);
+          }
 
           // Convert and filter results
           for (const googlePlace of results) {
