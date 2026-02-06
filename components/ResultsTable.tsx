@@ -89,14 +89,6 @@ export default function ResultsTable(props: ResultsTableProps) {
       return [];
     }
     
-    console.log(`ResultsTable: Filtering ${places.length} places`, {
-      showRecreational,
-      onlyClubs,
-      selectedAgeGroups: selectedAgeGroups.length,
-      filterSport,
-      searchQuery
-    });
-    
     let filtered = places.filter(place => {
       // Filter by "show recreational" toggle
       // When OFF, only hide places with negative scores (bars, restaurants) or very low scores (0)
@@ -136,8 +128,6 @@ export default function ResultsTable(props: ResultsTableProps) {
       }
       return true;
     });
-    
-    console.log(`ResultsTable: After filtering, ${filtered.length} places remain`);
     
     // Sort: When "Prioritize Clubs" is ON, clubs float to top
     // Otherwise: primary by clubScore (descending), secondary by drive time (ascending)
@@ -202,10 +192,6 @@ export default function ResultsTable(props: ResultsTableProps) {
   };
 
   // CRITICAL: Always render - never conditionally mount
-  // Log to verify places are being received
-  useEffect(() => {
-    console.log("ResultsTable - Places received:", places?.length, Array.isArray(places));
-  }, [places]);
 
   return (
     <div className="flex flex-col h-full bg-transparent">

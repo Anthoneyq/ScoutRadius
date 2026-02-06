@@ -68,9 +68,24 @@ export default function MapView(props: MapViewProps) {
     // Further dim the base map for intelligence-grade feel
     map.current.on('style.load', () => {
       if (map.current) {
-        // Reduce saturation and contrast of base map layers
-        map.current.setPaintProperty('water', 'fill-color', '#1a1f2e');
-        map.current.setPaintProperty('road-street', 'line-opacity', 0.3);
+        try {
+          // Reduce saturation and contrast of base map layers
+          // Check if layers exist before setting properties
+          if (map.current.getLayer('water')) {
+            map.current.setPaintProperty('water', 'fill-color', '#1a1f2e');
+          }
+          // Try common road layer names - different styles use different names
+          const roadLayers = ['road-street', 'road-street-low', 'road-primary-secondary', 'road'];
+          for (const layerName of roadLayers) {
+            if (map.current.getLayer(layerName)) {
+              map.current.setPaintProperty(layerName, 'line-opacity', 0.3);
+              break; // Only set the first one that exists
+            }
+          }
+        } catch (error) {
+          // Silently ignore if layers don't exist - different map styles have different layers
+          console.debug('Map layer styling skipped:', error);
+        }
       }
     });
 

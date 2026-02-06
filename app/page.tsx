@@ -19,7 +19,7 @@ export default function Home() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tags, setTags] = useState<Record<string, string>>({});
   const [onlyClubs, setOnlyClubs] = useState(false);
-  const [showRecreational, setShowRecreational] = useState(true); // Show all by default
+  const [showRecreational, setShowRecreational] = useState(false); // Default to hiding recreational
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
   
   // Track if we're loading from localStorage to prevent save loops
@@ -212,14 +212,6 @@ export default function Home() {
   const mixedRecreational = places.filter(p => (p.clubScore ?? 0) < 3).length;
   const mixedRecreationalPercent = totalClubs > 0 ? Math.round((mixedRecreational / totalClubs) * 100) : 100;
 
-  // CRITICAL: Log places data to verify rendering issue
-  useEffect(() => {
-    console.log("Places count:", places?.length, places);
-    console.log("Places array is array:", Array.isArray(places));
-    if (places.length > 0) {
-      console.log("First place:", places[0]);
-    }
-  }, [places]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[#0e1420] text-primary">
