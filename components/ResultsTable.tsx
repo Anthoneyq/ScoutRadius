@@ -196,14 +196,14 @@ export default function ResultsTable(props: ResultsTableProps) {
           </button>
         </div>
         
-        {/* Compact stat strip */}
+        {/* Compact stat strip - Always show, even if 0 */}
         <div className="grid grid-cols-3 gap-2">
           <div className="card-dark rounded-lg px-3 py-2">
-            <div className="text-xl font-light text-numeric text-primary">{totalClubs || '—'}</div>
+            <div className="text-xl font-light text-numeric text-primary">{totalClubs}</div>
             <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Total</div>
           </div>
           <div className="card-dark rounded-lg px-3 py-2">
-            <div className="text-xl font-light text-numeric accent-teal">{highConfidenceClubs || '—'}</div>
+            <div className="text-xl font-light text-numeric accent-teal">{highConfidenceClubs}</div>
             <div className="text-[10px] text-tertiary uppercase tracking-wider mt-0.5">Confidence</div>
           </div>
           <div className="card-dark rounded-lg px-3 py-2">
@@ -236,7 +236,7 @@ export default function ResultsTable(props: ResultsTableProps) {
           placeholder="Filter ranking..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-3 py-1.5 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-sm text-primary placeholder-text-tertiary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 font-light backdrop-blur-sm"
+          className="w-full px-3 py-1.5 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-sm text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 font-light backdrop-blur-sm"
         />
         {sports.length > 0 && (
           <select

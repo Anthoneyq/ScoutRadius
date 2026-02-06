@@ -142,7 +142,7 @@ export default function Controls(props: ControlsProps) {
             value={locationInput}
             onChange={(e) => setLocationInput(e.target.value)}
             placeholder="Address or coordinates"
-            className="w-full px-3 py-2 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-primary placeholder-text-tertiary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 text-sm font-light backdrop-blur-sm"
+            className="w-full px-3 py-2 bg-[#111827]/60 border border-[#374151]/40 rounded-lg text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#6b7280]/30 focus:border-[#6b7280]/40 text-sm font-light backdrop-blur-sm"
             disabled={isLoading}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !isSearchDisabled) {
