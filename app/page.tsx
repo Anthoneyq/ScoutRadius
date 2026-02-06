@@ -121,7 +121,8 @@ export default function Home() {
       }
 
       const searchData = await searchResponse.json();
-      const foundPlaces = searchData.places || [];
+      // Safety guard: ensure places is an array
+      const foundPlaces = Array.isArray(searchData.places) ? searchData.places : [];
       
       if (searchData.debug) {
         console.log('Search debug info:', searchData.debug);
@@ -167,19 +168,27 @@ export default function Home() {
   }, []);
 
   const handleExport = useCallback(() => {
-    const exportData = places.map(place => ({
-      'Club Name': place.name,
-      'Sport': place.sport || '',
-      'Drive Time (minutes)': place.driveTime ?? '',
-      'Distance (miles)': place.distance ? place.distance.toFixed(2) : '',
-      'Address': place.address,
-      'Phone': place.phone || '',
-      'Website': place.website || '',
-      'Rating': place.rating ? place.rating.toFixed(1) : '',
-      'Review Count': place.review_count?.toString() || '',
-      'Notes': notes[place.place_id] || '',
-      'Tags': tags[place.place_id] || '',
-    }));
+    // Safety guard: ensure places is an array
+    if (!Array.isArray(places)) return;
+    
+    const exportData = places.map(place => {
+      // Ensure name is a string (should already be converted from displayName.text)
+      const displayName = typeof place.name === 'string' ? place.name : '';
+      
+      return {
+        'Club Name': displayName,
+        'Sport': place.sport || '',
+        'Drive Time (minutes)': place.driveTime ?? '',
+        'Distance (miles)': place.distance ? place.distance.toFixed(2) : '',
+        'Address': place.address,
+        'Phone': place.phone || '',
+        'Website': place.website || '',
+        'Rating': place.rating ? place.rating.toFixed(1) : '',
+        'Review Count': place.review_count?.toString() || '',
+        'Notes': notes[place.place_id] || '',
+        'Tags': tags[place.place_id] || '',
+      };
+    });
 
     const csv = arrayToCSV(exportData);
     const filename = `sports-clubs-${new Date().toISOString().split('T')[0]}.csv`;

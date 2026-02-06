@@ -24,7 +24,11 @@ export interface GooglePlaceResult {
   id?: string;
   place_id?: string;
   name?: string;
-  displayName?: string;
+  // Google Places API (New) returns displayName as an object, not a string
+  displayName?: {
+    text: string;
+    languageCode?: string;
+  };
   formatted_address?: string;
   formattedAddress?: string;
   geometry?: {
@@ -199,7 +203,9 @@ export function deduplicatePlaces(places: Place[]): Place[] {
  */
 export function convertGooglePlace(googlePlace: GooglePlaceResult, sport?: string): Place {
   const placeId = googlePlace.place_id || googlePlace.id || '';
-  const name = googlePlace.name || googlePlace.displayName || 'Unknown';
+  // Google Places API (New) returns displayName as { text, languageCode }
+  // Extract the text property, fallback to name or 'Unknown'
+  const name = googlePlace.name || googlePlace.displayName?.text || 'Unknown';
   const address = googlePlace.formatted_address || googlePlace.formattedAddress || '';
   const phone = googlePlace.formatted_phone_number || googlePlace.formattedPhoneNumber || googlePlace.nationalPhoneNumber;
   const website = googlePlace.website || googlePlace.websiteUri;

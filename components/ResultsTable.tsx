@@ -54,14 +54,19 @@ export default function ResultsTable(props: ResultsTableProps) {
   }, [places]);
 
   const filteredAndSorted = useMemo(() => {
+    // Safety guard: ensure places is an array
+    if (!Array.isArray(places)) return [];
+    
     let filtered = places.filter(place => {
       if (filterSport !== 'all' && place.sport !== filterSport) {
         return false;
       }
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
+        // Ensure name is a string (should already be converted from displayName.text)
+        const name = typeof place.name === 'string' ? place.name : '';
         return (
-          place.name.toLowerCase().includes(query) ||
+          name.toLowerCase().includes(query) ||
           place.address.toLowerCase().includes(query) ||
           place.sport?.toLowerCase().includes(query)
         );
@@ -188,15 +193,19 @@ export default function ResultsTable(props: ResultsTableProps) {
             </tr>
           </thead>
           <tbody>
-            {filteredAndSorted.map((place) => (
-              <tr
-                key={place.place_id}
-                onClick={() => onPlaceClick(place.place_id)}
-                className={`border-b hover:bg-blue-50 cursor-pointer ${
-                  selectedPlaceId === place.place_id ? 'bg-blue-100' : ''
-                }`}
-              >
-                <td className="px-4 py-2 font-medium">{place.name}</td>
+            {filteredAndSorted.map((place) => {
+              // Safety guard: ensure name is a string (should already be converted from displayName.text)
+              const displayName = typeof place.name === 'string' ? place.name : '';
+              
+              return (
+                <tr
+                  key={place.place_id}
+                  onClick={() => onPlaceClick(place.place_id)}
+                  className={`border-b hover:bg-blue-50 cursor-pointer ${
+                    selectedPlaceId === place.place_id ? 'bg-blue-100' : ''
+                  }`}
+                >
+                  <td className="px-4 py-2 font-medium">{displayName}</td>
                 <td className="px-4 py-2">{place.sport || '-'}</td>
                 <td className="px-4 py-2">
                   {place.driveTime !== null && place.driveTime !== undefined
@@ -256,7 +265,8 @@ export default function ResultsTable(props: ResultsTableProps) {
                   />
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         {filteredAndSorted.length === 0 && (
