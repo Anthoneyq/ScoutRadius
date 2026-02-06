@@ -2,7 +2,7 @@
 
 import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
 
-export default function AuthButton() {
+function AuthButtonContent() {
   const { isSignedIn, isLoaded } = useUser();
   
   // Handle case where Clerk isn't loaded yet
@@ -39,4 +39,15 @@ export default function AuthButton() {
       </SignUpButton>
     </div>
   );
+}
+
+export default function AuthButton() {
+  // Check if Clerk is configured before rendering Clerk-dependent component
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
+  if (!clerkPublishableKey || clerkPublishableKey.trim() === '') {
+    return null;
+  }
+
+  return <AuthButtonContent />;
 }

@@ -12,7 +12,7 @@ interface UsageData {
   isAuthenticated: boolean;
 }
 
-export default function UsageDisplay() {
+function UsageDisplayContent() {
   const { user, isSignedIn, isLoaded } = useUser();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,4 +121,15 @@ export default function UsageDisplay() {
       )}
     </div>
   );
+}
+
+export default function UsageDisplay() {
+  // Check if Clerk is configured before rendering Clerk-dependent component
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
+  if (!clerkPublishableKey || clerkPublishableKey.trim() === '') {
+    return null;
+  }
+
+  return <UsageDisplayContent />;
 }
