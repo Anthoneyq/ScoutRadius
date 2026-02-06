@@ -16,6 +16,8 @@ export interface Place {
     lng: number;
   };
   sport?: string;
+  driveTime?: number;
+  distance?: number;
 }
 
 export interface GooglePlaceResult {
@@ -40,6 +42,7 @@ export interface GooglePlaceResult {
   userRatingCount?: number;
   formatted_phone_number?: string;
   formattedPhoneNumber?: string;
+  nationalPhoneNumber?: string;
   website?: string;
   websiteUri?: string;
   types?: string[];
