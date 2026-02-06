@@ -13,6 +13,7 @@ interface Place {
   sport?: string;
   driveTime?: number;
   distance?: number;
+  clubScore?: number; // Club confidence score
 }
 
 interface ResultsTableProps {
@@ -24,6 +25,7 @@ interface ResultsTableProps {
   onNotesChange: (placeId: string, notes: string) => void;
   onTagsChange: (placeId: string, tags: string) => void;
   onExport: () => void;
+  onlyClubs: boolean; // Filter to only clubs when true
 }
 
 type SortField = 'name' | 'sport' | 'driveTime' | 'distance' | 'rating' | 'review_count';
@@ -39,6 +41,7 @@ export default function ResultsTable(props: ResultsTableProps) {
     onNotesChange = () => {},
     onTagsChange = () => {},
     onExport = () => {},
+    onlyClubs = false,
   } = props || {};
   const [sortField, setSortField] = useState<SortField>('driveTime');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -58,6 +61,15 @@ export default function ResultsTable(props: ResultsTableProps) {
     if (!Array.isArray(places)) return [];
     
     let filtered = places.filter(place => {
+      // Filter by "only clubs" toggle
+      if (onlyClubs) {
+        // Only show places with clubScore >= 3 (likely clubs)
+        const score = place.clubScore ?? 0;
+        if (score < 3) {
+          return false;
+        }
+      }
+      
       if (filterSport !== 'all' && place.sport !== filterSport) {
         return false;
       }
@@ -72,6 +84,13 @@ export default function ResultsTable(props: ResultsTableProps) {
         );
       }
       return true;
+    });
+    
+    // Sort by clubScore descending (highest confidence first)
+    filtered.sort((a, b) => {
+      const scoreA = a.clubScore ?? 0;
+      const scoreB = b.clubScore ?? 0;
+      return scoreB - scoreA;
     });
 
     filtered.sort((a, b) => {
@@ -93,8 +112,30 @@ export default function ResultsTable(props: ResultsTableProps) {
       }
     });
 
+    // Apply secondary sort by the selected sort field
+    if (sortField !== 'name') {
+      filtered.sort((a, b) => {
+        let aVal: any = a[sortField];
+        let bVal: any = b[sortField];
+
+        if (aVal === null || aVal === undefined) aVal = sortDirection === 'asc' ? Infinity : -Infinity;
+        if (bVal === null || bVal === undefined) bVal = sortDirection === 'asc' ? Infinity : -Infinity;
+
+        if (typeof aVal === 'string') {
+          aVal = aVal.toLowerCase();
+          bVal = bVal.toLowerCase();
+        }
+
+        if (sortDirection === 'asc') {
+          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+        } else {
+          return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+        }
+      });
+    }
+
     return filtered;
-  }, [places, sortField, sortDirection, filterSport, searchQuery]);
+  }, [places, sortField, sortDirection, filterSport, searchQuery, onlyClubs]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -155,6 +196,7 @@ export default function ResultsTable(props: ResultsTableProps) {
               >
                 Club Name <SortIcon field="name" />
               </th>
+              <th className="px-4 py-2 text-left">Club Confidence</th>
               <th
                 className="px-4 py-2 text-left cursor-pointer hover:bg-gray-200"
                 onClick={() => handleSort('sport')}
@@ -206,6 +248,18 @@ export default function ResultsTable(props: ResultsTableProps) {
                   }`}
                 >
                   <td className="px-4 py-2 font-medium">{displayName}</td>
+                  <td className="px-4 py-2">
+                    {(() => {
+                      const score = place.clubScore ?? 0;
+                      if (score >= 4) {
+                        return <span className="text-green-600 font-medium">✅ Club</span>;
+                      } else if (score >= 2) {
+                        return <span className="text-yellow-600 font-medium">⚠️ Possible</span>;
+                      } else {
+                        return <span className="text-gray-500">⚪ Venue</span>;
+                      }
+                    })()}
+                  </td>
                 <td className="px-4 py-2">{place.sport || '-'}</td>
                 <td className="px-4 py-2">
                   {place.driveTime !== null && place.driveTime !== undefined

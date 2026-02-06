@@ -5,6 +5,8 @@ import { useState } from 'react';
 interface ControlsProps {
   onSearch: (origin: { lat: number; lng: number }, driveTime: number, sports: string[]) => void;
   isLoading: boolean;
+  onlyClubs: boolean;
+  onOnlyClubsChange: (onlyClubs: boolean) => void;
 }
 
 const SPORTS = [
@@ -18,6 +20,8 @@ export default function Controls(props: ControlsProps) {
   const {
     onSearch = () => {},
     isLoading = false,
+    onlyClubs = false,
+    onOnlyClubsChange = () => {},
   } = props || {};
   const [locationInput, setLocationInput] = useState('');
   const [driveTime, setDriveTime] = useState(30); // Default to 30 minutes
@@ -187,6 +191,26 @@ export default function Controls(props: ControlsProps) {
               </div>
             </>
           )}
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={onlyClubs}
+              onChange={(e) => onOnlyClubsChange(e.target.checked)}
+              disabled={isLoading}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Only clubs / teams
+            </span>
+          </label>
+          <p className="text-xs text-gray-500 mt-1 ml-6">
+            {onlyClubs 
+              ? 'Showing only competitive clubs and teams' 
+              : 'Showing all venues, ranked by club confidence'}
+          </p>
         </div>
 
         <button

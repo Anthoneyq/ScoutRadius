@@ -18,6 +18,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tags, setTags] = useState<Record<string, string>>({});
+  const [onlyClubs, setOnlyClubs] = useState(false);
   
   // Track if we're loading from localStorage to prevent save loops
   const isInitialLoadRef = useRef(true);
@@ -202,7 +203,12 @@ export default function Home() {
         <p className="text-sm text-blue-100">Find sports clubs within drive time</p>
       </header>
 
-      <Controls onSearch={handleSearch} isLoading={isLoading} />
+      <Controls 
+        onSearch={handleSearch} 
+        isLoading={isLoading}
+        onlyClubs={onlyClubs}
+        onOnlyClubsChange={setOnlyClubs}
+      />
 
       <div className="flex-1 flex overflow-hidden">
         <div className="w-1/2 border-r h-full">
@@ -225,6 +231,7 @@ export default function Home() {
             onNotesChange={handleNotesChange}
             onTagsChange={handleTagsChange}
             onExport={handleExport}
+            onlyClubs={onlyClubs}
           />
         </div>
       </div>

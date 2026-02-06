@@ -19,6 +19,7 @@ export interface Place {
   driveTime?: number;
   distance?: number;
   types?: string[]; // Place types from Google Places API
+  clubScore?: number; // Club confidence score (0-10+)
 }
 
 export interface GooglePlaceResult {
@@ -242,5 +243,48 @@ export function convertGooglePlace(googlePlace: GooglePlaceResult, sport?: strin
     location: { lat, lng },
     sport,
     types: googlePlace.types, // Include place types for filtering/scoring
+    // clubScore will be calculated in the search route after conversion
   };
+}
+
+/**
+ * Calculate club confidence score for a place
+ * Higher score = more likely to be a competitive club/team
+ * Score ranges: ≥4 = Club, 2-3 = Possible, ≤1 = Venue
+ */
+export function getClubConfidence(place: Place): number {
+  let score = 0;
+  const name = place.name.toLowerCase();
+
+  // Strong positive signals (club indicators)
+  if (name.match(/club|academy|elite|junior|youth|select|travel|competitive/i)) {
+    score += 3;
+  }
+  if (place.types?.includes('sports_club')) {
+    score += 3;
+  }
+  if (place.website) {
+    score += 2; // Clubs typically have websites
+  }
+
+  // Medium positive signals
+  if (place.review_count && place.review_count > 10) {
+    score += 1; // Established places have more reviews
+  }
+  if (place.rating && place.rating >= 4.0) {
+    score += 1; // Good ratings suggest quality organization
+  }
+
+  // Strong negative signals (venue indicators)
+  if (name.match(/bar|restaurant|grill|pub|cantina|brew|tavern/i)) {
+    score -= 4; // Definitely not a club
+  }
+  
+  // Medium negative signals
+  if (name.match(/gym|fitness|crossfit|equinox|lifetime|health club/i)) {
+    score -= 1; // May be a facility, not a team
+  }
+
+  // Ensure score doesn't go below 0
+  return Math.max(0, score);
 }
