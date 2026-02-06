@@ -348,11 +348,17 @@ export default function ResultsTable(props: ResultsTableProps) {
                       
                       {/* Secondary metrics */}
                       <div className="flex items-center gap-3 text-xs text-tertiary font-light">
+                        {place.sport && (
+                          <span className="uppercase tracking-wider">{place.sport}</span>
+                        )}
                         {place.distance !== null && place.distance !== undefined && (
                           <span>{place.distance.toFixed(1)} mi</span>
                         )}
                         {place.rating && (
                           <span>{place.rating.toFixed(1)} ⭐</span>
+                        )}
+                        {place.review_count && (
+                          <span>({place.review_count})</span>
                         )}
                         {place.website && (
                           <a
@@ -367,9 +373,32 @@ export default function ResultsTable(props: ResultsTableProps) {
                         )}
                       </div>
                       
-                      {/* Address - tertiary */}
-                      <div className="text-[11px] text-tertiary font-light mt-1 truncate">
-                        {place.address}
+                      {/* Address and phone */}
+                      <div className="text-[11px] text-tertiary font-light mt-1">
+                        <div className="truncate">{place.address}</div>
+                        {place.phone && (
+                          <div className="mt-0.5">{place.phone}</div>
+                        )}
+                      </div>
+                      
+                      {/* Notes and Tags - editable */}
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          type="text"
+                          value={notes[place.place_id] || ''}
+                          onChange={(e) => onNotesChange(place.place_id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="Notes..."
+                          className="flex-1 px-2 py-1 bg-[#111827]/40 border border-[#374151]/30 rounded text-[10px] text-secondary placeholder:text-tertiary focus:ring-1 focus:ring-[#6b7280]/20 focus:border-[#6b7280]/30 font-light"
+                        />
+                        <input
+                          type="text"
+                          value={tags[place.place_id] || ''}
+                          onChange={(e) => onTagsChange(place.place_id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="Tags..."
+                          className="flex-1 px-2 py-1 bg-[#111827]/40 border border-[#374151]/30 rounded text-[10px] text-secondary placeholder:text-tertiary focus:ring-1 focus:ring-[#6b7280]/20 focus:border-[#6b7280]/30 font-light"
+                        />
                       </div>
                     </div>
                     
