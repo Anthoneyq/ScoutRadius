@@ -37,13 +37,17 @@ export default function MapView(props: MapViewProps) {
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const originMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const onPlaceClickRef = useRef(onPlaceClick);
+  const placesRef = useRef(places);
+  const originRef = useRef(origin);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  // Keep callback ref updated without causing re-renders
+  // Keep refs updated without causing re-renders
   useEffect(() => {
     onPlaceClickRef.current = onPlaceClick;
-  }, [onPlaceClick]);
+    placesRef.current = places;
+    originRef.current = origin;
+  }, [onPlaceClick, places, origin]);
 
   // 1️⃣ CREATE MAP ONCE - no dependencies on props
   useEffect(() => {
@@ -97,13 +101,39 @@ export default function MapView(props: MapViewProps) {
       setMapError('Failed to load map. Check your Mapbox token.');
     });
 
+    // Fix marker positions after zoom/pan to prevent drift
+    const fixMarkerPositions = () => {
+      if (!map.current) return;
+      
+      // Update all place markers - read from ref to get current values
+      markersRef.current.forEach((marker, placeId) => {
+        const place = placesRef.current.find(p => p.place_id === placeId);
+        if (place) {
+          // Force update position to prevent drift
+          marker.setLngLat([place.location.lng, place.location.lat]);
+        }
+      });
+      
+      // Update origin marker
+      if (originMarkerRef.current && originRef.current) {
+        originMarkerRef.current.setLngLat([originRef.current.lng, originRef.current.lat]);
+      }
+    };
+
+    // Listen to map move events to fix marker positions
+    map.current.on('moveend', fixMarkerPositions);
+    map.current.on('zoomend', fixMarkerPositions);
+
     return () => {
       if (map.current) {
+        // Remove event listeners
+        map.current.off('moveend', fixMarkerPositions);
+        map.current.off('zoomend', fixMarkerPositions);
         map.current.remove();
         map.current = null;
       }
     };
-  }, []);
+  }, []); // Empty deps - map created once
 
 
   // Update map center when origin changes
