@@ -191,10 +191,10 @@ export default function Controls(props: ControlsProps) {
           {showSportsDropdown && (
             <>
               <div
-                className="fixed inset-0 z-10"
+                className="fixed inset-0 z-[90]"
                 onClick={() => setShowSportsDropdown(false)}
               />
-              <div className="absolute z-20 w-full mt-1.5 bg-luxury-card border border-[#334155]/40 rounded-md shadow-2xl max-h-48 overflow-y-auto backdrop-blur-md">
+              <div className="absolute z-[100] w-full mt-1.5 bg-luxury-card border border-[#334155]/40 rounded-md shadow-2xl max-h-48 overflow-y-auto backdrop-blur-md">
                 <div className="p-2 space-y-1">
                   {SPORTS.map((sport) => (
                     <label
@@ -220,7 +220,7 @@ export default function Controls(props: ControlsProps) {
         <button
           onClick={handleSearch}
           disabled={isSearchDisabled}
-          className="px-6 py-2.5 bg-luxury-card hover:bg-[#1e293b]/60 text-primary rounded-md font-light disabled:opacity-40 disabled:cursor-not-allowed transition-luxury text-sm text-label border border-[#334155]/30 backdrop-blur-sm hover:border-[#fbbf24]/30 hover:shadow-[0_0_16px_rgba(251,191,36,0.15)]"
+          className="px-8 py-3 bg-gradient-to-r from-[#fbbf24]/20 to-[#f59e0b]/20 hover:from-[#fbbf24]/30 hover:to-[#f59e0b]/30 text-primary rounded-md font-light disabled:opacity-40 disabled:cursor-not-allowed transition-luxury text-sm text-label border-2 border-[#fbbf24]/40 hover:border-[#fbbf24]/60 backdrop-blur-sm hover:shadow-[0_0_24px_rgba(251,191,36,0.25)] shadow-[0_0_12px_rgba(251,191,36,0.15)] accent-gold font-medium"
         >
           {isLoading ? 'ANALYZING...' : 'ANALYZE AREA'}
         </button>
