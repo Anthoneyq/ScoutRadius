@@ -270,7 +270,7 @@ export default function Home() {
 
       {/* MOBILE COLLAPSED SIDEBAR — icon bar when collapsed (shows after Analyze) */}
       {isMounted && (
-        <div className={`md:hidden fixed left-0 top-14 bottom-0 z-40 w-12 bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out ${
+        <div className={`md:hidden fixed left-0 top-12 bottom-0 z-40 w-12 bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out ${
           sidebarCollapsed && !sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
         <div className="flex flex-col items-center py-4 space-y-3">
@@ -307,7 +307,7 @@ export default function Home() {
       {/* MOBILE SIDEBAR — slides in from left on mobile (narrower) */}
       {/* Only render sidebar after mount to prevent hydration issues */}
       {isMounted && (
-        <div className={`md:hidden fixed top-14 left-0 bottom-0 z-40 w-[75vw] max-w-xs bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+        <div className={`md:hidden fixed top-12 left-0 bottom-0 z-40 w-[75vw] max-w-xs bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
         {/* Sidebar Header */}
@@ -363,14 +363,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* MOBILE TOP BAR — hamburger + location input always visible */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30 px-3 py-2 flex items-center gap-2">
+      {/* MOBILE TOP BAR — hamburger menu button only */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30 px-3 py-2 flex items-center">
         <button
           onClick={() => {
             setSidebarOpen(!sidebarOpen);
             setSidebarCollapsed(false);
           }}
-          className="p-2 text-primary hover:text-[#fbbf24] transition-luxury flex-shrink-0"
+          className="p-2 text-primary hover:text-[#fbbf24] transition-luxury"
           aria-label="Toggle sidebar"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -381,22 +381,6 @@ export default function Home() {
             )}
           </svg>
         </button>
-        <div className="flex-1 min-w-0">
-          <input
-            type="text"
-            value={locationInput}
-            placeholder="Starting location..."
-            className="w-full px-3 py-2 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-sm text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 font-light transition-luxury"
-            onClick={() => {
-              if (!sidebarOpen) {
-                setSidebarOpen(true);
-                setSidebarCollapsed(false);
-              }
-            }}
-            readOnly
-            aria-label="Starting location"
-          />
-        </div>
       </div>
 
       {/* MOBILE SIDEBAR BACKDROP — closes sidebar when clicked */}

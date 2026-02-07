@@ -202,10 +202,8 @@ export default function Controls(props: ControlsProps) {
       return;
     }
 
-    if (selectedSports.length === 0) {
-      alert('Please select at least one sport');
-      return;
-    }
+    // If no sports selected, search for all sports by default
+    const sportsToSearch = selectedSports.length > 0 ? selectedSports : SPORTS.map(s => s.id);
 
     // Parse location input (could be address or lat,lng)
     let origin: { lat: number; lng: number };
@@ -245,10 +243,10 @@ export default function Controls(props: ControlsProps) {
       }
     }
 
-    onSearch(origin, driveTime, selectedSports, selectedSchoolTypes.length > 0 ? selectedSchoolTypes : undefined);
+    onSearch(origin, driveTime, sportsToSearch, selectedSchoolTypes.length > 0 ? selectedSchoolTypes : undefined);
   };
 
-  const isSearchDisabled = isLoading || !locationInput.trim() || selectedSports.length === 0;
+  const isSearchDisabled = isLoading || !locationInput.trim();
 
   return (
     <div className="px-6 py-3.5 border-b border-[#334155]/30 bg-luxury-card">
