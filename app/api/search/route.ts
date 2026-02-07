@@ -247,6 +247,65 @@ export async function POST(request: NextRequest) {
             try {
               const place = convertGooglePlace(googlePlace, sport);
               
+              // Detect if this is a school (even if found through sports search)
+              const placeName = (place.name || '').toLowerCase();
+              const placeTypes = googlePlace.types || [];
+              const isSchool = 
+                placeTypes.some((type: string) => 
+                  type.includes('school') || 
+                  type.includes('educational')
+                ) ||
+                placeName.includes('school') ||
+                placeName.includes('academy') ||
+                placeName.includes('preparatory') ||
+                placeName.includes('high school') ||
+                placeName.includes('middle school') ||
+                placeName.includes('elementary');
+              
+              if (isSchool) {
+                place.isSchool = true;
+                
+                // Detect school types from name/types
+                let detectedSchoolTypes: string[] = [];
+                
+                // Check for private/public indicators
+                if (placeName.includes('private') || placeTypes.some(t => t.includes('private'))) {
+                  detectedSchoolTypes.push('private');
+                }
+                if (placeName.includes('public') || placeTypes.some(t => t.includes('public'))) {
+                  detectedSchoolTypes.push('public');
+                }
+                // If no explicit private/public indicator, infer from context
+                // Most schools without "private" in name are public schools
+                if (detectedSchoolTypes.length === 0) {
+                  // Check Google Places types for school indicators
+                  const hasSchoolType = placeTypes.some(t => 
+                    t.includes('school') || 
+                    t.includes('educational')
+                  );
+                  if (hasSchoolType) {
+                    // Default to public if no explicit private indicator
+                    detectedSchoolTypes.push('public');
+                  }
+                }
+                
+                // Add school level types
+                if (placeName.includes('elementary') || placeName.includes('primary') || placeName.includes('grade school')) {
+                  detectedSchoolTypes.push('elementary');
+                }
+                if (placeName.includes('middle school') || placeName.includes('intermediate')) {
+                  detectedSchoolTypes.push('middle');
+                }
+                if (placeName.includes('junior high')) {
+                  detectedSchoolTypes.push('juniorHigh');
+                }
+                if (placeName.includes('high school') || placeName.includes('secondary')) {
+                  detectedSchoolTypes.push('highSchool');
+                }
+                
+                place.schoolTypes = detectedSchoolTypes.length > 0 ? detectedSchoolTypes : ['highSchool']; // Default to high school if unclear
+              }
+              
               // HARD EXCLUSION: Retail sporting goods stores
               // These are not ambiguous - they should never appear as clubs
               // Check before any scoring or processing
