@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Place } from '@/lib/googlePlaces';
 
 interface ResultsTableProps {
@@ -46,6 +46,8 @@ export default function ResultsTable(props: ResultsTableProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [filterSport, setFilterSport] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const selectedItemRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const sports = useMemo(() => {
     const sportSet = new Set<string>();
@@ -128,6 +130,35 @@ export default function ResultsTable(props: ResultsTableProps) {
     return filtered;
   }, [places, sortField, sortDirection, filterSport, searchQuery, selectedAgeGroups]);
 
+  // Scroll to selected item when selectedPlaceId changes
+  useEffect(() => {
+    if (selectedPlaceId && selectedItemRef.current && scrollContainerRef.current) {
+      // Use setTimeout to ensure DOM has updated
+      setTimeout(() => {
+        if (selectedItemRef.current && scrollContainerRef.current) {
+          const container = scrollContainerRef.current;
+          const element = selectedItemRef.current;
+          
+          // Calculate scroll position to center the element in view
+          const containerRect = container.getBoundingClientRect();
+          const elementRect = element.getBoundingClientRect();
+          const scrollTop = container.scrollTop;
+          const elementTop = elementRect.top - containerRect.top + scrollTop;
+          const elementHeight = elementRect.height;
+          const containerHeight = containerRect.height;
+          
+          // Center the element in the container
+          const targetScroll = elementTop - (containerHeight / 2) + (elementHeight / 2);
+          
+          container.scrollTo({
+            top: Math.max(0, targetScroll),
+            behavior: 'smooth',
+          });
+        }
+      }, 100);
+    }
+  }, [selectedPlaceId, filteredAndSorted]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -203,7 +234,7 @@ export default function ResultsTable(props: ResultsTableProps) {
       </div>
 
       {/* Section 2: Ranked Results - Intelligence Dossier Style */}
-      <div className="flex-1 overflow-auto">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto">
         {filteredAndSorted.length === 0 ? (
           /* Section 3: Empty State - Never Blank */
           <div className="px-5 py-10">
@@ -291,11 +322,16 @@ export default function ResultsTable(props: ResultsTableProps) {
               return (
                 <div
                   key={place.place_id}
+                  ref={(el) => {
+                    if (isSelected && el) {
+                      selectedItemRef.current = el;
+                    }
+                  }}
                   onClick={() => onPlaceClick(place.place_id)}
                   className={`px-4 py-3.5 cursor-pointer transition-luxury ${
                     isSelected 
-                      ? 'card-luxury border-l-2 border-l-[#fbbf24]/40' 
-                      : 'hover-luxury hover:bg-luxury-card'
+                      ? 'card-luxury border-2 border-[#fbbf24]/60 bg-[#fbbf24]/5 shadow-[0_0_20px_rgba(251,191,36,0.15)]' 
+                      : 'hover-luxury hover:bg-luxury-card border-2 border-transparent'
                   }`}
                 >
                   <div className="flex items-start gap-3">
