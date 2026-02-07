@@ -102,54 +102,42 @@ export default function MapView(props: MapViewProps) {
     });
 
     // Fix marker positions after zoom/pan to prevent drift
-    // CRITICAL: Force reposition on zoom to fix visual offset issues
-    let fixTimeout: NodeJS.Timeout | null = null;
-    
-    const fixMarkerPositions = (forceReposition = false) => {
+    // CRITICAL: Mapbox markers use CSS transforms internally, which can drift during zoom animations
+    // The 'idle' event fires when the map is fully rendered and not animating - this is when we reposition
+    const fixMarkerPositions = () => {
       if (!map.current) return;
       
-      // Use requestAnimationFrame to ensure map has finished rendering
-      requestAnimationFrame(() => {
-        // Update all place markers - read from ref to get current values
-        markersRef.current.forEach((marker, placeId) => {
-          const place = placesRef.current.find(p => p.place_id === placeId);
-          if (place) {
-            // Always reposition on zoom to fix visual offset
-            // The visual offset is often due to CSS rendering, not coordinate drift
-            marker.setLngLat([place.location.lng, place.location.lat]);
-          }
-        });
-        
-        // Update origin marker
-        if (originMarkerRef.current && originRef.current) {
-          originMarkerRef.current.setLngLat([originRef.current.lng, originRef.current.lat]);
+      // Update all place markers - read from ref to get current values
+      markersRef.current.forEach((marker, placeId) => {
+        const place = placesRef.current.find(p => p.place_id === placeId);
+        if (place) {
+          // Always reposition to correct coordinates - Mapbox's internal transforms can drift during zoom
+          marker.setLngLat([place.location.lng, place.location.lat]);
         }
       });
+      
+      // Update origin marker
+      if (originMarkerRef.current && originRef.current) {
+        originMarkerRef.current.setLngLat([originRef.current.lng, originRef.current.lat]);
+      }
     };
 
-    // Listen to map zoom events - ALWAYS reposition on zoom to fix visual offset
-    const handleZoom = () => {
-      // Force immediate reposition on zoom (no debounce for zoom)
-      fixMarkerPositions(true);
+    // Reposition markers when map is idle (fully rendered, no animations)
+    // The 'idle' event is the most reliable indicator that the map has finished all operations
+    const handleIdle = () => {
+      // Use requestAnimationFrame to ensure browser has finished rendering before repositioning
+      requestAnimationFrame(() => {
+        fixMarkerPositions();
+      });
     };
     
-    // Debounced handler for pan/move (less critical)
-    const debouncedFixPositions = () => {
-      if (fixTimeout) clearTimeout(fixTimeout);
-      fixTimeout = setTimeout(() => fixMarkerPositions(false), 100);
-    };
-    
-    map.current.on('zoom', handleZoom); // Immediate on zoom
-    map.current.on('zoomend', handleZoom); // Also on zoom end
-    map.current.on('moveend', debouncedFixPositions); // Debounced for pan
+    // Listen to 'idle' event - fires after zoom, pan, and any other map operations complete
+    map.current.on('idle', handleIdle);
 
     return () => {
       if (map.current) {
         // Remove event listeners
-        map.current.off('zoom', handleZoom);
-        map.current.off('zoomend', handleZoom);
-        map.current.off('moveend', debouncedFixPositions);
-        if (fixTimeout) clearTimeout(fixTimeout);
+        map.current.off('idle', handleIdle);
         map.current.remove();
         map.current = null;
       }
@@ -262,8 +250,22 @@ export default function MapView(props: MapViewProps) {
       const isSelected = place.place_id === selectedPlaceId;
 
       if (existingMarker) {
-        // Update existing marker
-        existingMarker.setLngLat([place.location.lng, place.location.lat]);
+        // Update existing marker position - ensure it's correct
+        const currentLngLat = existingMarker.getLngLat();
+        const expectedLng = place.location.lng;
+        const expectedLat = place.location.lat;
+        
+        // Always update position to ensure accuracy (marker might have drifted)
+        existingMarker.setLngLat([expectedLng, expectedLat]);
+        
+        // Force a re-render of the marker element to ensure Mapbox updates its transform
+        // This is a workaround for Mapbox's internal transform calculations
+        const markerEl = existingMarker.getElement();
+        if (markerEl && map.current) {
+          // Trigger a repaint by temporarily hiding and showing (forces Mapbox to recalculate)
+          // Actually, better approach: directly update via Mapbox's internal mechanism
+          // Just ensure the lngLat is set correctly - Mapbox will handle the rest
+        }
         
         // Update marker appearance for selection and confidence
         const el = existingMarker.getElement();
@@ -354,19 +356,22 @@ export default function MapView(props: MapViewProps) {
         el.style.boxShadow = isSelected 
           ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
           : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)';
-        el.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
+        el.style.transition = 'opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), border-color 300ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)'; // Only transition visual properties, NOT transform
         el.style.cursor = 'pointer';
         el.style.pointerEvents = 'auto';
-        el.style.position = 'relative';
+        el.style.position = 'absolute'; // Changed from 'relative' - Mapbox handles positioning via transform
         el.style.zIndex = isSelected ? '1000' : '10';
-        // Ensure no transforms or offsets that could cause visual drift
+        // CRITICAL: Do NOT set transform, left, top, margin, padding - Mapbox controls these
+        // Mapbox will apply its own CSS transform for positioning
         el.style.margin = '0';
         el.style.padding = '0';
-        el.style.transform = 'none';
-        el.style.left = '0';
-        el.style.top = '0';
         el.style.display = 'block';
-        el.style.boxSizing = 'border-box'; // Ensure border is included in size calculation
+        el.style.boxSizing = 'border-box';
+        // Ensure no conflicting positioning styles
+        el.style.left = 'auto';
+        el.style.top = 'auto';
+        el.style.right = 'auto';
+        el.style.bottom = 'auto';
 
         // Store state on element for hover handlers to read (prevents stale closure issues)
         el.setAttribute('data-original-opacity', markerOpacity);
