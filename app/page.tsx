@@ -89,7 +89,7 @@ export default function Home() {
     searchOrigin: { lat: number; lng: number },
     driveTime: number,
     sports: string[],
-    includeSchools?: boolean
+    schoolTypes?: string[]
   ) => {
     setIsLoading(true);
     setOrigin(searchOrigin);
@@ -117,7 +117,7 @@ export default function Home() {
           sports,
           driveTimeMinutes: driveTime,
           isochroneGeoJSON: isochroneData, // Pass the fetched isochrone for polygon filtering
-          includeSchools: includeSchools || false,
+          schoolTypes: schoolTypes || [],
         }),
       });
 

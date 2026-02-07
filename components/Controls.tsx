@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface ControlsProps {
-  onSearch: (origin: { lat: number; lng: number }, driveTime: number, sports: string[], includeSchools?: boolean) => void;
+  onSearch: (origin: { lat: number; lng: number }, driveTime: number, sports: string[], schoolTypes?: string[]) => void;
   isLoading: boolean;
   selectedAgeGroups: string[];
   onAgeGroupsChange: (ageGroups: string[]) => void;
@@ -24,6 +24,15 @@ const AGE_GROUPS = [
   { id: 'adult', label: 'Adult' },
 ];
 
+const SCHOOL_TYPES = [
+  { id: 'private', label: 'Private School' },
+  { id: 'public', label: 'Public School' },
+  { id: 'elementary', label: 'Elementary School' },
+  { id: 'middle', label: 'Middle School' },
+  { id: 'juniorHigh', label: 'Junior High' },
+  { id: 'highSchool', label: 'High School' },
+];
+
 export default function Controls(props: ControlsProps) {
   const {
     onSearch = () => {},
@@ -34,11 +43,14 @@ export default function Controls(props: ControlsProps) {
   const [locationInput, setLocationInput] = useState('');
   const [driveTime, setDriveTime] = useState(30); // Default to 30 minutes
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
-  const [includeSchools, setIncludeSchools] = useState(false);
+  const [selectedSchoolTypes, setSelectedSchoolTypes] = useState<string[]>([]);
   const [showSportsDropdown, setShowSportsDropdown] = useState(false);
+  const [showSchoolTypesDropdown, setShowSchoolTypesDropdown] = useState(false);
   const [showAgeGroupsDropdown, setShowAgeGroupsDropdown] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [sportsDropdownPosition, setSportsDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [schoolTypesDropdownPosition, setSchoolTypesDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const sportsButtonRef = useRef<HTMLButtonElement>(null);
+  const schoolTypesButtonRef = useRef<HTMLButtonElement>(null);
 
   const toggleSport = (sportId: string) => {
     setSelectedSports(prev =>
@@ -64,6 +76,22 @@ export default function Controls(props: ControlsProps) {
     return `${selectedAgeGroups.length} age groups`;
   };
 
+  const getSchoolTypesDisplayText = () => {
+    if (selectedSchoolTypes.length === 0) return 'School Type';
+    if (selectedSchoolTypes.length === 1) {
+      return SCHOOL_TYPES.find(s => s.id === selectedSchoolTypes[0])?.label || selectedSchoolTypes[0];
+    }
+    return `${selectedSchoolTypes.length} types`;
+  };
+
+  const toggleSchoolType = (schoolTypeId: string) => {
+    setSelectedSchoolTypes(prev =>
+      prev.includes(schoolTypeId)
+        ? prev.filter(s => s !== schoolTypeId)
+        : [...prev, schoolTypeId]
+    );
+  };
+
   const toggleAgeGroup = (ageGroupId: string) => {
     onAgeGroupsChange(
       selectedAgeGroups.includes(ageGroupId)
@@ -72,10 +100,10 @@ export default function Controls(props: ControlsProps) {
     );
   };
 
-  // Calculate dropdown position when it opens or window resizes
-  const calculateDropdownPosition = useCallback(() => {
+  // Calculate dropdown position for sports dropdown
+  const calculateSportsDropdownPosition = useCallback(() => {
     if (!showSportsDropdown || !sportsButtonRef.current) {
-      setDropdownPosition(null);
+      setSportsDropdownPosition(null);
       return;
     }
     
@@ -84,48 +112,81 @@ export default function Controls(props: ControlsProps) {
     const viewportHeight = window.innerHeight;
     const dropdownHeight = 192; // max-h-48 = 192px
     
-    // Calculate position
-    let top = rect.bottom + 6; // 6px = mt-1.5 equivalent
+    let top = rect.bottom + 6;
     let left = rect.left;
     let width = rect.width;
     
-    // Adjust if dropdown would go off bottom of screen (show above instead)
     if (top + dropdownHeight > viewportHeight && rect.top > dropdownHeight) {
       top = rect.top - dropdownHeight - 6;
     }
     
-    // Ensure dropdown doesn't go off right edge of screen
     if (left + width > viewportWidth - 16) {
-      left = viewportWidth - width - 16; // 16px padding from edge
+      left = viewportWidth - width - 16;
     }
     
-    // Ensure dropdown doesn't go off left edge of screen
     if (left < 16) {
-      left = 16; // 16px padding from edge
-      width = Math.min(width, viewportWidth - 32); // Adjust width if needed
+      left = 16;
+      width = Math.min(width, viewportWidth - 32);
     }
     
-    setDropdownPosition({
-      top,
-      left,
-      width,
-    });
+    setSportsDropdownPosition({ top, left, width });
   }, [showSportsDropdown]);
 
-  useEffect(() => {
-    calculateDropdownPosition();
+  // Calculate dropdown position for school types dropdown
+  const calculateSchoolTypesDropdownPosition = useCallback(() => {
+    if (!showSchoolTypesDropdown || !schoolTypesButtonRef.current) {
+      setSchoolTypesDropdownPosition(null);
+      return;
+    }
     
-    // Recalculate on window resize (important for mobile rotation)
+    const rect = schoolTypesButtonRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const dropdownHeight = 240; // Slightly taller for school types
+    
+    let top = rect.bottom + 6;
+    let left = rect.left;
+    let width = rect.width;
+    
+    if (top + dropdownHeight > viewportHeight && rect.top > dropdownHeight) {
+      top = rect.top - dropdownHeight - 6;
+    }
+    
+    if (left + width > viewportWidth - 16) {
+      left = viewportWidth - width - 16;
+    }
+    
+    if (left < 16) {
+      left = 16;
+      width = Math.min(width, viewportWidth - 32);
+    }
+    
+    setSchoolTypesDropdownPosition({ top, left, width });
+  }, [showSchoolTypesDropdown]);
+
+  useEffect(() => {
+    calculateSportsDropdownPosition();
     if (showSportsDropdown) {
-      window.addEventListener('resize', calculateDropdownPosition);
-      window.addEventListener('scroll', calculateDropdownPosition, true);
-      
+      window.addEventListener('resize', calculateSportsDropdownPosition);
+      window.addEventListener('scroll', calculateSportsDropdownPosition, true);
       return () => {
-        window.removeEventListener('resize', calculateDropdownPosition);
-        window.removeEventListener('scroll', calculateDropdownPosition, true);
+        window.removeEventListener('resize', calculateSportsDropdownPosition);
+        window.removeEventListener('scroll', calculateSportsDropdownPosition, true);
       };
     }
-  }, [showSportsDropdown, calculateDropdownPosition]);
+  }, [showSportsDropdown, calculateSportsDropdownPosition]);
+
+  useEffect(() => {
+    calculateSchoolTypesDropdownPosition();
+    if (showSchoolTypesDropdown) {
+      window.addEventListener('resize', calculateSchoolTypesDropdownPosition);
+      window.addEventListener('scroll', calculateSchoolTypesDropdownPosition, true);
+      return () => {
+        window.removeEventListener('resize', calculateSchoolTypesDropdownPosition);
+        window.removeEventListener('scroll', calculateSchoolTypesDropdownPosition, true);
+      };
+    }
+  }, [showSchoolTypesDropdown, calculateSchoolTypesDropdownPosition]);
 
   const handleSearch = async () => {
     if (!locationInput.trim()) {
@@ -176,7 +237,7 @@ export default function Controls(props: ControlsProps) {
       }
     }
 
-    onSearch(origin, driveTime, selectedSports, includeSchools);
+    onSearch(origin, driveTime, selectedSports, selectedSchoolTypes.length > 0 ? selectedSchoolTypes : undefined);
   };
 
   const isSearchDisabled = isLoading || !locationInput.trim() || selectedSports.length === 0;
@@ -248,7 +309,7 @@ export default function Controls(props: ControlsProps) {
             </svg>
           </button>
           
-          {showSportsDropdown && dropdownPosition && (
+          {showSportsDropdown && sportsDropdownPosition && (
             <>
               <div
                 className="fixed inset-0 z-[90]"
@@ -257,9 +318,9 @@ export default function Controls(props: ControlsProps) {
               <div 
                 className="fixed z-[100] bg-luxury-card border border-[#334155]/40 rounded-md shadow-2xl max-h-48 overflow-y-auto backdrop-blur-md"
                 style={{
-                  top: `${dropdownPosition.top}px`,
-                  left: `${dropdownPosition.left}px`,
-                  width: `${dropdownPosition.width}px`,
+                  top: `${sportsDropdownPosition.top}px`,
+                  left: `${sportsDropdownPosition.left}px`,
+                  width: `${sportsDropdownPosition.width}px`,
                 }}
               >
                 <div className="p-2 space-y-1">
@@ -284,17 +345,68 @@ export default function Controls(props: ControlsProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 min-w-[140px]">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeSchools}
-              onChange={(e) => setIncludeSchools(e.target.checked)}
-              disabled={isLoading}
-              className="w-4 h-4 accent-[#fbbf24] border-[#334155] rounded bg-[#0f172a]/50 focus:ring-[#fbbf24]/30 transition-luxury"
-            />
-            <span className="text-xs font-light text-label text-tertiary">Include Schools</span>
+        <div className="relative min-w-[160px]">
+          <label className="block text-xs font-light text-label text-tertiary mb-2">
+            SCHOOL TYPE
           </label>
+          <button
+            ref={schoolTypesButtonRef}
+            type="button"
+            onClick={() => setShowSchoolTypesDropdown(!showSchoolTypesDropdown)}
+            disabled={isLoading}
+            className={`w-full px-3.5 py-2.5 bg-[#0f172a]/50 border rounded-md text-left text-primary text-sm font-light focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed transition-luxury backdrop-blur-sm ${
+              selectedSchoolTypes.length > 0 
+                ? 'border-[#fbbf24]/40 bg-[#fbbf24]/10' 
+                : 'border-[#334155]/30'
+            }`}
+          >
+            <span className={selectedSchoolTypes.length === 0 ? 'text-tertiary' : ''}>
+              {getSchoolTypesDisplayText()}
+            </span>
+            <svg
+              className={`w-3.5 h-3.5 transition-transform text-tertiary ${showSchoolTypesDropdown ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          {showSchoolTypesDropdown && schoolTypesDropdownPosition && (
+            <>
+              <div
+                className="fixed inset-0 z-[90]"
+                onClick={() => setShowSchoolTypesDropdown(false)}
+              />
+              <div 
+                className="fixed z-[100] bg-luxury-card border border-[#334155]/40 rounded-md shadow-2xl max-h-60 overflow-y-auto backdrop-blur-md"
+                style={{
+                  top: `${schoolTypesDropdownPosition.top}px`,
+                  left: `${schoolTypesDropdownPosition.left}px`,
+                  width: `${schoolTypesDropdownPosition.width}px`,
+                }}
+              >
+                <div className="p-2 space-y-1">
+                  {SCHOOL_TYPES.map((schoolType) => (
+                    <label
+                      key={schoolType.id}
+                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#1e293b]/50 cursor-pointer rounded-md transition-luxury"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSchoolTypes.includes(schoolType.id)}
+                        onChange={() => toggleSchoolType(schoolType.id)}
+                        disabled={isLoading}
+                        className="w-4 h-4 accent-[#fbbf24] border-[#334155] rounded bg-[#0f172a]/50 focus:ring-[#fbbf24]/30 transition-luxury"
+                      />
+                      <span className="text-sm text-secondary font-light">{schoolType.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <button

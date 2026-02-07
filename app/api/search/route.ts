@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const { origin, sports, driveTimeMinutes, isochroneGeoJSON, includeSchools = false } = body;
+    const { origin, sports, driveTimeMinutes, isochroneGeoJSON, schoolTypes = [] } = body;
 
     if (!origin || !origin.lat || !origin.lng) {
       return NextResponse.json(
@@ -419,21 +419,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Search for schools if includeSchools is enabled
-    if (includeSchools) {
-      const schoolKeywords = [
-        'high school',
-        'middle school',
-        'elementary school',
-        'private school',
-        'public school',
-        'academy',
-        'preparatory school',
-      ];
+    // Search for schools if school types are selected
+    if (schoolTypes && schoolTypes.length > 0) {
+      // Map school types to search keywords
+      const schoolTypeKeywords: Record<string, string[]> = {
+        'private': ['private school', 'private academy', 'private high school', 'private elementary'],
+        'public': ['public school', 'public high school', 'public middle school', 'public elementary'],
+        'elementary': ['elementary school', 'primary school', 'grade school'],
+        'middle': ['middle school', 'intermediate school'],
+        'juniorHigh': ['junior high school', 'junior high'],
+        'highSchool': ['high school', 'secondary school'],
+      };
       
-      for (const keyword of schoolKeywords) {
+      // Collect all keywords for selected school types
+      const schoolKeywords: string[] = [];
+      schoolTypes.forEach((type: string) => {
+        const keywords = schoolTypeKeywords[type] || [];
+        schoolKeywords.push(...keywords);
+      });
+      
+      // Remove duplicates
+      const uniqueKeywords = [...new Set(schoolKeywords)];
+      
+      for (const keyword of uniqueKeywords) {
         try {
-          console.log(`[Search API] Searching for "${keyword}" (schools)`);
+          console.log(`[Search API] Searching for "${keyword}" (school types: ${schoolTypes.join(', ')})`);
           const results = await searchPlaces(
             keyword,
             { lat: origin.lat, lng: origin.lng },
@@ -449,25 +459,59 @@ export async function POST(request: NextRequest) {
           for (const googlePlace of results) {
             try {
               // Check if place is a school by types or name
-              const placeName = googlePlace.displayName?.text || '';
+              const placeName = (googlePlace.displayName?.text || '').toLowerCase();
               const placeTypes = googlePlace.types || [];
               const isSchool = 
                 placeTypes.some((type: string) => 
                   type.includes('school') || 
                   type.includes('educational')
                 ) ||
-                placeName.toLowerCase().includes('school') ||
-                placeName.toLowerCase().includes('academy') ||
-                placeName.toLowerCase().includes('preparatory');
+                placeName.includes('school') ||
+                placeName.includes('academy') ||
+                placeName.includes('preparatory');
               
               if (!isSchool) continue; // Skip non-schools
+              
+              // Detect school type from name/types
+              let detectedSchoolTypes: string[] = [];
+              if (placeName.includes('private') || placeTypes.some(t => t.includes('private'))) {
+                detectedSchoolTypes.push('private');
+              }
+              if (placeName.includes('public') || placeTypes.some(t => t.includes('public'))) {
+                detectedSchoolTypes.push('public');
+              }
+              if (placeName.includes('elementary') || placeName.includes('primary') || placeName.includes('grade school')) {
+                detectedSchoolTypes.push('elementary');
+              }
+              if (placeName.includes('middle school') || placeName.includes('intermediate')) {
+                detectedSchoolTypes.push('middle');
+              }
+              if (placeName.includes('junior high')) {
+                detectedSchoolTypes.push('juniorHigh');
+              }
+              if (placeName.includes('high school') || placeName.includes('secondary')) {
+                detectedSchoolTypes.push('highSchool');
+              }
+              
+              // Filter by selected school types - must match at least one
+              if (detectedSchoolTypes.length > 0) {
+                const matchesSelectedType = detectedSchoolTypes.some(detected => schoolTypes.includes(detected));
+                if (!matchesSelectedType) continue; // Skip if doesn't match any selected type
+              } else {
+                // If we can't detect type, include it if searching for generic school terms
+                // This handles cases where school type isn't clear from name
+                if (!schoolKeywords.some(k => placeName.includes(k.split(' ')[0]))) {
+                  continue; // Skip if name doesn't match any keyword
+                }
+              }
               
               // Use first sport or "school" as sport label
               const sportLabel = sports.length > 0 ? sports[0] : 'school';
               const place = convertGooglePlace(googlePlace, sportLabel);
               
-              // Mark as school
+              // Mark as school and store detected types
               place.isSchool = true;
+              place.schoolTypes = detectedSchoolTypes.length > 0 ? detectedSchoolTypes : ['unknown'];
               
               // HARD EXCLUSION: Retail sporting goods stores
               if (isRetailSportStore({

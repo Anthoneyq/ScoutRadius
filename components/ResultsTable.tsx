@@ -1,28 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-
-interface Place {
-  place_id: string;
-  name: string;
-  address: string;
-  phone?: string;
-  website?: string;
-  rating?: number;
-  review_count?: number;
-  sport?: string;
-  driveTime?: number;
-  distance?: number;
-  clubScore?: number; // Club confidence score
-  isClub?: boolean; // True if clubScore >= 3
-  ageGroups?: {
-    youth: number;
-    highSchool: number;
-    adult: number;
-    elite: number;
-  };
-  primaryAgeGroup?: 'youth' | 'highSchool' | 'adult' | 'elite';
-}
+import { Place } from '@/lib/googlePlaces';
 
 interface ResultsTableProps {
   places: Place[];
@@ -334,6 +313,21 @@ export default function ResultsTable(props: ResultsTableProps) {
                             {place.isClub && (
                               <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#10b981]/15 text-[#10b981] font-light text-label">
                                 Club
+                              </span>
+                            )}
+                            {place.isSchool && place.schoolTypes && place.schoolTypes.length > 0 && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#3b82f6]/15 text-[#3b82f6] font-light text-label">
+                                {place.schoolTypes.map(type => {
+                                  const labels: Record<string, string> = {
+                                    'private': 'Private',
+                                    'public': 'Public',
+                                    'elementary': 'Elementary',
+                                    'middle': 'Middle',
+                                    'juniorHigh': 'Jr High',
+                                    'highSchool': 'High School',
+                                  };
+                                  return labels[type] || type;
+                                }).join(' • ')}
                               </span>
                             )}
                             {/* Confidence tier badge */}
