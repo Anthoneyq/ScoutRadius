@@ -102,9 +102,10 @@ export default function MapView(props: MapViewProps) {
     });
 
     // Fix marker positions after zoom/pan to prevent drift
+    // CRITICAL: Force reposition on zoom to fix visual offset issues
     let fixTimeout: NodeJS.Timeout | null = null;
     
-    const fixMarkerPositions = () => {
+    const fixMarkerPositions = (forceReposition = false) => {
       if (!map.current) return;
       
       // Use requestAnimationFrame to ensure map has finished rendering
@@ -113,47 +114,41 @@ export default function MapView(props: MapViewProps) {
         markersRef.current.forEach((marker, placeId) => {
           const place = placesRef.current.find(p => p.place_id === placeId);
           if (place) {
-            // Get current marker position
-            const currentPos = marker.getLngLat();
-            const expectedLng = place.location.lng;
-            const expectedLat = place.location.lat;
-            
-            // Only update if position has drifted significantly (>1 meter)
-            const lngDiff = Math.abs(currentPos.lng - expectedLng);
-            const latDiff = Math.abs(currentPos.lat - expectedLat);
-            // ~0.00001 degrees ≈ 1 meter at equator
-            if (lngDiff > 0.00001 || latDiff > 0.00001) {
-              marker.setLngLat([expectedLng, expectedLat]);
-            }
+            // Always reposition on zoom to fix visual offset
+            // The visual offset is often due to CSS rendering, not coordinate drift
+            marker.setLngLat([place.location.lng, place.location.lat]);
           }
         });
         
         // Update origin marker
         if (originMarkerRef.current && originRef.current) {
-          const currentPos = originMarkerRef.current.getLngLat();
-          const lngDiff = Math.abs(currentPos.lng - originRef.current.lng);
-          const latDiff = Math.abs(currentPos.lat - originRef.current.lat);
-          if (lngDiff > 0.00001 || latDiff > 0.00001) {
-            originMarkerRef.current.setLngLat([originRef.current.lng, originRef.current.lat]);
-          }
+          originMarkerRef.current.setLngLat([originRef.current.lng, originRef.current.lat]);
         }
       });
     };
 
-    // Listen to map move events to fix marker positions (debounced)
-    const debouncedFixPositions = () => {
-      if (fixTimeout) clearTimeout(fixTimeout);
-      fixTimeout = setTimeout(fixMarkerPositions, 100); // Debounce to avoid excessive updates
+    // Listen to map zoom events - ALWAYS reposition on zoom to fix visual offset
+    const handleZoom = () => {
+      // Force immediate reposition on zoom (no debounce for zoom)
+      fixMarkerPositions(true);
     };
     
-    map.current.on('moveend', debouncedFixPositions);
-    map.current.on('zoomend', debouncedFixPositions);
+    // Debounced handler for pan/move (less critical)
+    const debouncedFixPositions = () => {
+      if (fixTimeout) clearTimeout(fixTimeout);
+      fixTimeout = setTimeout(() => fixMarkerPositions(false), 100);
+    };
+    
+    map.current.on('zoom', handleZoom); // Immediate on zoom
+    map.current.on('zoomend', handleZoom); // Also on zoom end
+    map.current.on('moveend', debouncedFixPositions); // Debounced for pan
 
     return () => {
       if (map.current) {
         // Remove event listeners
+        map.current.off('zoom', handleZoom);
+        map.current.off('zoomend', handleZoom);
         map.current.off('moveend', debouncedFixPositions);
-        map.current.off('zoomend', debouncedFixPositions);
         if (fixTimeout) clearTimeout(fixTimeout);
         map.current.remove();
         map.current = null;
@@ -189,7 +184,11 @@ export default function MapView(props: MapViewProps) {
     el.style.cursor = 'pointer';
     el.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
 
-    originMarkerRef.current = new mapboxgl.Marker(el)
+    originMarkerRef.current = new mapboxgl.Marker({
+      element: el,
+      anchor: 'center',
+      offset: [0, 0], // Explicitly set offset to 0
+    })
       .setLngLat([origin.lng, origin.lat])
       .addTo(map.current);
   }, [origin, isLoaded]);
@@ -366,6 +365,8 @@ export default function MapView(props: MapViewProps) {
         el.style.transform = 'none';
         el.style.left = '0';
         el.style.top = '0';
+        el.style.display = 'block';
+        el.style.boxSizing = 'border-box'; // Ensure border is included in size calculation
 
         // Store state on element for hover handlers to read (prevents stale closure issues)
         el.setAttribute('data-original-opacity', markerOpacity);
@@ -382,6 +383,7 @@ export default function MapView(props: MapViewProps) {
         const marker = new mapboxgl.Marker({
           element: el,
           anchor: 'center', // Center anchor prevents shifting
+          offset: [0, 0], // Explicitly set offset to 0 to prevent any shift
         })
           .setLngLat([place.location.lng, place.location.lat])
           .addTo(map.current!);
