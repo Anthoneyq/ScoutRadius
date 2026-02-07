@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 interface AnalyzingOverlayProps {
   isLoading: boolean;
   searchParams?: {
@@ -10,11 +12,69 @@ interface AnalyzingOverlayProps {
 }
 
 export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingOverlayProps) {
-  if (!isLoading) return null;
+  const [progress, setProgress] = useState({
+    area: 0,
+    search: 0,
+    analysis: 0,
+  });
 
   const sports = searchParams?.sports || [];
   const schoolTypes = searchParams?.schoolTypes || [];
   const location = searchParams?.location || '';
+
+  // Timer-based progress animation - independent of real loading speed
+  useEffect(() => {
+    if (!isLoading) {
+      // Reset progress when loading stops
+      setProgress({ area: 0, search: 0, analysis: 0 });
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Area generation: steady progress with slight randomness (±8-12%)
+        const areaIncrement = 0.4 + Math.random() * 0.2;
+        const newArea = Math.min(prev.area + areaIncrement, 92);
+
+        // Search: starts after area reaches 30%, faster with randomness
+        const searchIncrement = prev.area > 30 
+          ? 0.5 + Math.random() * 0.3 
+          : 0;
+        const newSearch = Math.min(prev.search + searchIncrement, 92);
+
+        // Analysis: starts after search reaches 60%, slower but steady
+        const analysisIncrement = prev.search > 60
+          ? 0.3 + Math.random() * 0.2
+          : 0;
+        const newAnalysis = Math.min(prev.analysis + analysisIncrement, 92);
+
+        return {
+          area: newArea,
+          search: newSearch,
+          analysis: newAnalysis,
+        };
+      });
+    }, 120); // Update every 120ms for smooth motion (≤180ms requirement)
+
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  // Snap to completion when loading finishes
+  useEffect(() => {
+    if (!isLoading) {
+      // Quick snap to 100% for confident finish (only if bars were progressing)
+      setProgress(prev => {
+        if (prev.area > 0 || prev.search > 0 || prev.analysis > 0) {
+          return { area: 100, search: 100, analysis: 100 };
+        }
+        return prev;
+      });
+    }
+  }, [isLoading]);
+
+  if (!isLoading && progress.area === 0 && progress.search === 0 && progress.analysis === 0) {
+    return null;
+  }
 
   // Format sport names for display
   const formatSportName = (sport: string) => {
@@ -65,9 +125,12 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-[#fbbf24] animate-pulse"></div>
               <div className="flex-1">
-                <div className="text-sm font-light text-label text-secondary mb-1">Generating drive-time area</div>
+                <div className="text-sm font-light text-label text-secondary mb-1">Mapping reachable training area</div>
                 <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#fbbf24]/40 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                  <div 
+                    className="h-full bg-[#fbbf24]/40 rounded-full transition-all duration-[600ms] ease-out"
+                    style={{ width: `${progress.area}%` }}
+                  ></div>
                 </div>
               </div>
             </div>
@@ -81,14 +144,17 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
                 <div className="flex-1">
                   <div className="text-sm font-light text-label text-secondary mb-1">
                     {isSearchingAll 
-                      ? 'Searching all sports clubs & teams'
+                      ? 'Scanning relevant programs'
                       : sports.length === 1 
-                        ? `Searching ${formatSportName(sports[0])} clubs`
-                        : `Searching ${sports.length} sports: ${sports.slice(0, 2).map(formatSportName).join(', ')}${sports.length > 2 ? '...' : ''}`
+                        ? `Scanning ${formatSportName(sports[0])} programs`
+                        : `Scanning ${sports.length} sports: ${sports.slice(0, 2).map(formatSportName).join(', ')}${sports.length > 2 ? '...' : ''}`
                     }
                   </div>
                   <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#10b981]/40 rounded-full animate-pulse" style={{ width: '75%' }}></div>
+                    <div 
+                      className="h-full bg-[#10b981]/40 rounded-full transition-all duration-[600ms] ease-out"
+                      style={{ width: `${progress.search}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -103,12 +169,15 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
                 <div className="flex-1">
                   <div className="text-sm font-light text-label text-secondary mb-1">
                     {schoolTypes.length === 1 
-                      ? `Searching ${formatSchoolType(schoolTypes[0])}`
-                      : `Searching ${schoolTypes.length} school types`
+                      ? `Validating ${formatSchoolType(schoolTypes[0])}`
+                      : `Validating ${schoolTypes.length} school types`
                     }
                   </div>
                   <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#3b82f6]/40 rounded-full animate-pulse" style={{ width: '50%' }}></div>
+                    <div 
+                      className="h-full bg-[#3b82f6]/40 rounded-full transition-all duration-[600ms] ease-out"
+                      style={{ width: `${progress.search}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -120,9 +189,12 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-[#fbbf24] animate-pulse"></div>
               <div className="flex-1">
-                <div className="text-sm font-light text-label text-secondary mb-1">Analyzing results & calculating intelligence</div>
+                <div className="text-sm font-light text-label text-secondary mb-1">Ranking best opportunities</div>
                 <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#fbbf24]/40 rounded-full animate-pulse" style={{ width: '90%' }}></div>
+                  <div 
+                    className="h-full bg-[#fbbf24]/40 rounded-full transition-all duration-[600ms] ease-out"
+                    style={{ width: `${progress.analysis}%` }}
+                  ></div>
                 </div>
               </div>
             </div>
