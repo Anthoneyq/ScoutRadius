@@ -29,6 +29,9 @@ export default function Home() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Mobile sidebar collapsed state (shows icons)
   const [locationInput, setLocationInput] = useState(''); // Shared location input state
   const [isMounted, setIsMounted] = useState(false); // Prevent hydration issues
+  const [bottomSheetPosition, setBottomSheetPosition] = useState<'collapsed' | 'expanded' | 'results'>('collapsed'); // Mobile bottom sheet state
+  const [dragStartY, setDragStartY] = useState<number | null>(null);
+  const [dragCurrentY, setDragCurrentY] = useState<number | null>(null);
   const [currentSearchParams, setCurrentSearchParams] = useState<{
     sports?: string[];
     schoolTypes?: string[];
@@ -185,7 +188,8 @@ export default function Home() {
       
       setPlaces(foundPlaces);
       
-      // Collapse sidebar to icon view on mobile after search completes
+      // Expand bottom sheet to results view on mobile after search completes
+      setBottomSheetPosition('results');
       setSidebarCollapsed(true);
       setSidebarOpen(false);
       
@@ -268,10 +272,73 @@ export default function Home() {
   const publicSchools = places.filter(p => p.isSchool && p.schoolTypes?.includes('public')).length;
 
 
+  // Handle bottom sheet drag
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    setDragStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (dragStartY === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - dragStartY;
+    setDragCurrentY(deltaY);
+  };
+
+  const handleTouchEnd = () => {
+    if (dragStartY === null) {
+      setDragStartY(null);
+      setDragCurrentY(null);
+      return;
+    }
+
+    const threshold = 50; // Minimum drag distance to trigger state change
+    
+    if (dragCurrentY !== null) {
+      if (dragCurrentY > threshold) {
+        // Dragging down - collapse
+        if (bottomSheetPosition === 'results') {
+          setBottomSheetPosition('expanded');
+        } else if (bottomSheetPosition === 'expanded') {
+          setBottomSheetPosition('collapsed');
+        }
+      } else if (dragCurrentY < -threshold) {
+        // Dragging up - expand
+        if (bottomSheetPosition === 'collapsed') {
+          setBottomSheetPosition('expanded');
+        } else if (bottomSheetPosition === 'expanded') {
+          setBottomSheetPosition('results');
+        }
+      }
+    }
+
+    setDragStartY(null);
+    setDragCurrentY(null);
+  };
+
+  // Calculate bottom sheet transform
+  const getBottomSheetTransform = () => {
+    if (dragCurrentY !== null && dragStartY !== null) {
+      // During drag, show live position
+      const baseTransform = bottomSheetPosition === 'collapsed' ? '45%' : bottomSheetPosition === 'expanded' ? '0' : '20%';
+      const baseValue = bottomSheetPosition === 'collapsed' ? 45 : bottomSheetPosition === 'expanded' ? 0 : 20;
+      const dragPercent = (dragCurrentY / window.innerHeight) * 100;
+      return `${Math.max(0, Math.min(45, baseValue + dragPercent))}%`;
+    }
+    
+    // Static positions
+    if (bottomSheetPosition === 'collapsed') return '45%';
+    if (bottomSheetPosition === 'expanded') return '0';
+    if (bottomSheetPosition === 'results') return '20%';
+    return '45%';
+  };
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-luxury-dark text-primary">
-      {/* MAP — always bottom layer, full screen */}
-      <div className="absolute inset-0 z-0">
+      {/* MAP — root layer, full screen, fixed position */}
+      <div className="fixed inset-0 z-0">
         <MapView
           origin={origin}
           places={places}
@@ -287,130 +354,101 @@ export default function Home() {
         searchParams={currentSearchParams || undefined}
       />
 
-      {/* MOBILE COLLAPSED SIDEBAR — icon bar when collapsed (shows after Analyze) */}
+      {/* MOBILE BOTTOM SHEET — map-first interface */}
       {isMounted && (
-        <div className={`md:hidden fixed left-0 top-12 bottom-0 z-40 w-12 bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out ${
-          sidebarCollapsed && !sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
-        <div className="flex flex-col items-center py-4 space-y-3">
-          <button
-            onClick={() => {
-              setSidebarOpen(true);
-              setSidebarCollapsed(false);
+        <>
+          {/* Bottom Sheet */}
+          <div
+            className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-luxury-card backdrop-blur-md border-t border-[#334155]/30 rounded-t-2xl shadow-2xl touch-none"
+            style={{
+              height: '65vh',
+              transform: `translateY(${getBottomSheetTransform()})`,
+              transition: dragCurrentY === null ? 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
             }}
-            className="p-2 text-primary hover:text-[#fbbf24] transition-luxury"
-            aria-label="Open menu"
-            title="Menu"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <button
-            onClick={() => {
-              setSidebarOpen(true);
-              setSidebarCollapsed(false);
-            }}
-            className="p-2 text-primary hover:text-[#fbbf24] transition-luxury"
-            aria-label="Open results"
-            title="Results"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-          </button>
-        </div>
-        </div>
-      )}
+            {/* Grab Handle - draggable area */}
+            <div
+              className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div className="w-9 h-1 bg-[#334155]/50 rounded-full"></div>
+            </div>
 
-      {/* MOBILE SIDEBAR — slides in from left on mobile (narrower) */}
-      {/* Only render sidebar after mount to prevent hydration issues */}
-      {isMounted && (
-        <div className={`md:hidden fixed top-12 left-0 bottom-0 z-40 w-[75vw] max-w-xs bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
-        {/* Sidebar Header */}
-        <div className="sticky top-0 bg-luxury-card border-b border-[#334155]/30 px-4 py-3 flex items-center justify-between z-10">
-          <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
-          <button
-            onClick={() => {
-              setSidebarOpen(false);
-              setSidebarCollapsed(true);
-            }}
-            className="p-1 text-tertiary hover:text-primary transition-luxury"
-            aria-label="Close sidebar"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+            {/* Sheet Content */}
+            <div className="flex flex-col h-[calc(65vh-16px)] overflow-hidden">
+              {/* Header */}
+              <div className="px-4 py-3 border-b border-[#334155]/30 flex-shrink-0">
+                <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
+              </div>
 
-        {/* Sidebar Content */}
-        <div className="px-4 py-4 space-y-4">
-          {/* Controls in Sidebar */}
-          <Controls 
-            onSearch={handleSearch} 
-            isLoading={isLoading}
-            selectedAgeGroups={selectedAgeGroups}
-            onAgeGroupsChange={setSelectedAgeGroups}
-            locationInput={locationInput}
-            onLocationInputChange={setLocationInput}
-          />
-
-          {/* Results Table in Sidebar */}
-          <div className="flex flex-col bg-luxury-card border border-[#334155]/30 rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 280px)' }}>
-            <ResultsTable
-              places={places}
-              selectedPlaceId={selectedPlaceId}
-              onPlaceClick={handlePlaceClick}
-              notes={notes}
-              tags={tags}
-              onNotesChange={handleNotesChange}
-              onTagsChange={handleTagsChange}
-              onExport={handleExport}
-              selectedAgeGroups={selectedAgeGroups}
-              totalClubs={totalClubs}
-              highConfidenceClubs={highConfidenceClubs}
-              avgDriveTime={avgDriveTime}
-              avgDistance={avgDistance}
-              youthFocusedPercent={youthFocusedPercent}
-              mixedRecreationalPercent={mixedRecreationalPercent}
-            />
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto">
+                {bottomSheetPosition === 'results' && places.length > 0 ? (
+                  // Results View (after search) - scrollable
+                  <ResultsTable
+                    places={places}
+                    selectedPlaceId={selectedPlaceId}
+                    onPlaceClick={handlePlaceClick}
+                    notes={notes}
+                    tags={tags}
+                    onNotesChange={handleNotesChange}
+                    onTagsChange={handleTagsChange}
+                    onExport={handleExport}
+                    selectedAgeGroups={selectedAgeGroups}
+                    totalClubs={totalClubs}
+                    highConfidenceClubs={highConfidenceClubs}
+                    avgDriveTime={avgDriveTime}
+                    avgDistance={avgDistance}
+                    youthFocusedPercent={youthFocusedPercent}
+                    mixedRecreationalPercent={mixedRecreationalPercent}
+                  />
+                ) : (
+                  // Controls View (pre-search or expanded)
+                  <div className="px-4 py-4">
+                    <Controls 
+                      onSearch={handleSearch} 
+                      isLoading={isLoading}
+                      selectedAgeGroups={selectedAgeGroups}
+                      onAgeGroupsChange={setSelectedAgeGroups}
+                      locationInput={locationInput}
+                      onLocationInputChange={setLocationInput}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        </div>
+
+          {/* Tap area to expand when collapsed - invisible overlay */}
+          {bottomSheetPosition === 'collapsed' && (
+            <div
+              className="md:hidden fixed bottom-0 left-0 right-0 h-[35vh] z-30 pointer-events-auto"
+              onClick={(e) => {
+                e.stopPropagation();
+                setBottomSheetPosition('expanded');
+              }}
+            />
+          )}
+        </>
       )}
 
-      {/* MOBILE TOP BAR — hamburger menu button only */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30 px-3 py-2 flex items-center">
-        <button
-          onClick={() => {
-            setSidebarOpen(!sidebarOpen);
-            setSidebarCollapsed(false);
-          }}
-          className="p-2 text-primary hover:text-[#fbbf24] transition-luxury"
-          aria-label="Toggle sidebar"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {sidebarOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
-      </div>
-
-      {/* MOBILE SIDEBAR BACKDROP — closes sidebar when clicked */}
-      {sidebarOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
-          onClick={() => {
-            setSidebarOpen(false);
-            setSidebarCollapsed(true);
-          }}
-        />
+      {/* FLOATING ANALYZE BUTTON — when bottom sheet is collapsed */}
+      {isMounted && bottomSheetPosition === 'collapsed' && (
+        <div className="md:hidden fixed bottom-24 left-4 right-4 z-50 pointer-events-auto">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              // Expand sheet to show controls
+              setBottomSheetPosition('expanded');
+            }}
+            className="w-full px-8 py-3 bg-gradient-to-r from-[#fbbf24]/20 to-[#f59e0b]/20 hover:from-[#fbbf24]/30 hover:to-[#f59e0b]/30 text-primary rounded-md font-light disabled:opacity-40 disabled:cursor-not-allowed transition-luxury text-sm text-label border-2 border-[#fbbf24]/40 hover:border-[#fbbf24]/60 backdrop-blur-sm hover:shadow-[0_0_24px_rgba(251,191,36,0.25)] shadow-[0_0_12px_rgba(251,191,36,0.15)] accent-gold font-medium"
+            disabled={isLoading}
+          >
+            {isLoading ? 'ANALYZING...' : 'ANALYZE AREA'}
+          </button>
+        </div>
       )}
 
       {/* DESKTOP TOP CONTROL BAR — hidden on mobile */}
