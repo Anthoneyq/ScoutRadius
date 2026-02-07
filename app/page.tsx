@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import MapView from '@/components/MapView';
 import ResultsTable from '@/components/ResultsTable';
 import Controls from '@/components/Controls';
+import AnalyzingOverlay from '@/components/AnalyzingOverlay';
 import { arrayToCSV, downloadCSV } from '@/lib/csv';
 import { Place } from '@/lib/googlePlaces';
 
@@ -28,6 +29,11 @@ export default function Home() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Mobile sidebar collapsed state (shows icons)
   const [locationInput, setLocationInput] = useState(''); // Shared location input state
   const [isMounted, setIsMounted] = useState(false); // Prevent hydration issues
+  const [currentSearchParams, setCurrentSearchParams] = useState<{
+    sports?: string[];
+    schoolTypes?: string[];
+    location?: string;
+  } | null>(null);
   
   // Track if we're loading from localStorage to prevent save loops
   const isInitialLoadRef = useRef(true);
@@ -101,6 +107,13 @@ export default function Home() {
     setIsLoading(true);
     setOrigin(searchOrigin);
     setSelectedPlaceId(null);
+    
+    // Store search parameters for the analyzing overlay
+    setCurrentSearchParams({
+      sports,
+      schoolTypes,
+      location: locationInput,
+    });
 
     try {
       // Generate isochrone first
@@ -267,6 +280,12 @@ export default function Home() {
           onPlaceClick={handlePlaceClick}
         />
       </div>
+
+      {/* ANALYZING OVERLAY — shows when searching */}
+      <AnalyzingOverlay 
+        isLoading={isLoading} 
+        searchParams={currentSearchParams || undefined}
+      />
 
       {/* MOBILE COLLAPSED SIDEBAR — icon bar when collapsed (shows after Analyze) */}
       {isMounted && (
