@@ -251,6 +251,8 @@ export default function Home() {
   const youthFocusedPercent = totalClubs > 0 ? Math.round((youthFocused / totalClubs) * 100) : 0;
   const mixedRecreational = places.filter(p => (p.clubScore ?? 0) < 3).length;
   const mixedRecreationalPercent = totalClubs > 0 ? Math.round((mixedRecreational / totalClubs) * 100) : 100;
+  const privateSchools = places.filter(p => p.isSchool && p.schoolTypes?.includes('private')).length;
+  const publicSchools = places.filter(p => p.isSchool && p.schoolTypes?.includes('public')).length;
 
 
   return (
@@ -453,6 +455,18 @@ export default function Home() {
           <div className="card-luxury rounded-lg px-5 py-4">
             <div className="text-2xl font-light text-numeric text-primary">{avgDistance ? avgDistance.toFixed(1) : '—'}</div>
             <div className="text-[10px] text-label text-tertiary mt-1">AVG DISTANCE (MI)</div>
+          </div>
+        </div>
+        <div className="pointer-events-auto">
+          <div className="card-luxury rounded-lg px-5 py-4">
+            <div className="text-2xl font-light text-numeric accent-gold">{privateSchools}</div>
+            <div className="text-[10px] text-label text-tertiary mt-1">PRIVATE SCHOOLS</div>
+          </div>
+        </div>
+        <div className="pointer-events-auto">
+          <div className="card-luxury rounded-lg px-5 py-4">
+            <div className="text-2xl font-light text-numeric accent-emerald">{publicSchools}</div>
+            <div className="text-[10px] text-label text-tertiary mt-1">PUBLIC SCHOOLS</div>
           </div>
         </div>
       </div>
