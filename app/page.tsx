@@ -24,13 +24,20 @@ export default function Home() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tags, setTags] = useState<Record<string, string>>({});
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state - starts closed
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Mobile sidebar collapsed state (shows icons)
+  const [locationInput, setLocationInput] = useState(''); // Shared location input state
+  const [isMounted, setIsMounted] = useState(false); // Prevent hydration issues
   
   // Track if we're loading from localStorage to prevent save loops
   const isInitialLoadRef = useRef(true);
   const notesRef = useRef<string>('');
   const tagsRef = useRef<string>('');
+
+  // Set mounted state to prevent hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Load notes and tags from localStorage on mount
   useEffect(() => {
@@ -260,9 +267,10 @@ export default function Home() {
       </div>
 
       {/* MOBILE COLLAPSED SIDEBAR — icon bar when collapsed (shows after Analyze) */}
-      <div className={`md:hidden fixed left-0 top-14 bottom-0 z-40 w-12 bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out ${
-        sidebarCollapsed && !sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      {isMounted && (
+        <div className={`md:hidden fixed left-0 top-14 bottom-0 z-40 w-12 bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out ${
+          sidebarCollapsed && !sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         <div className="flex flex-col items-center py-4 space-y-3">
           <button
             onClick={() => {
@@ -291,12 +299,15 @@ export default function Home() {
             </svg>
           </button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* MOBILE SIDEBAR — slides in from left on mobile (narrower) */}
-      <div className={`md:hidden fixed top-14 left-0 bottom-0 z-40 w-[75vw] max-w-xs bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      {/* Only render sidebar after mount to prevent hydration issues */}
+      {isMounted && (
+        <div className={`md:hidden fixed top-14 left-0 bottom-0 z-40 w-[75vw] max-w-xs bg-luxury-card backdrop-blur-md border-r border-[#334155]/30 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         {/* Sidebar Header */}
         <div className="sticky top-0 bg-luxury-card border-b border-[#334155]/30 px-4 py-3 flex items-center justify-between z-10">
           <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
@@ -322,6 +333,8 @@ export default function Home() {
             isLoading={isLoading}
             selectedAgeGroups={selectedAgeGroups}
             onAgeGroupsChange={setSelectedAgeGroups}
+            locationInput={locationInput}
+            onLocationInputChange={setLocationInput}
           />
 
           {/* Results Table in Sidebar */}
@@ -345,7 +358,8 @@ export default function Home() {
             />
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* MOBILE TOP BAR — hamburger + location input always visible */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30 px-3 py-2 flex items-center gap-2">
@@ -368,6 +382,7 @@ export default function Home() {
         <div className="flex-1 min-w-0">
           <input
             type="text"
+            value={locationInput}
             placeholder="Starting location..."
             className="w-full px-3 py-2 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-sm text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 font-light transition-luxury"
             onClick={() => {
@@ -377,6 +392,7 @@ export default function Home() {
               }
             }}
             readOnly
+            aria-label="Starting location"
           />
         </div>
       </div>
@@ -399,11 +415,13 @@ export default function Home() {
             <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
             <AuthButton />
           </div>
-          <Controls 
-            onSearch={handleSearch} 
+          <Controls
+            onSearch={handleSearch}
             isLoading={isLoading}
             selectedAgeGroups={selectedAgeGroups}
             onAgeGroupsChange={setSelectedAgeGroups}
+            locationInput={locationInput}
+            onLocationInputChange={setLocationInput}
           />
         </div>
       </div>

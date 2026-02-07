@@ -7,6 +7,8 @@ interface ControlsProps {
   isLoading: boolean;
   selectedAgeGroups: string[];
   onAgeGroupsChange: (ageGroups: string[]) => void;
+  locationInput?: string;
+  onLocationInputChange?: (value: string) => void;
 }
 
 const SPORTS = [
@@ -39,8 +41,14 @@ export default function Controls(props: ControlsProps) {
     isLoading = false,
     selectedAgeGroups = [],
     onAgeGroupsChange = () => {},
+    locationInput: externalLocationInput,
+    onLocationInputChange,
   } = props || {};
-  const [locationInput, setLocationInput] = useState('');
+  
+  // Use external state if provided, otherwise use internal state
+  const [internalLocationInput, setInternalLocationInput] = useState('');
+  const locationInput = externalLocationInput !== undefined ? externalLocationInput : internalLocationInput;
+  const setLocationInput = onLocationInputChange || setInternalLocationInput;
   const [driveTime, setDriveTime] = useState(30); // Default to 30 minutes
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [selectedSchoolTypes, setSelectedSchoolTypes] = useState<string[]>([]);
