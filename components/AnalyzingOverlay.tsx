@@ -22,7 +22,7 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
   const schoolTypes = searchParams?.schoolTypes || [];
   const location = searchParams?.location || '';
 
-  // Timer-based progress animation - independent of real loading speed
+  // Timer-based progress animation - faster and more realistic
   useEffect(() => {
     if (!isLoading) {
       // Reset progress when loading stops
@@ -32,21 +32,21 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
 
     const interval = setInterval(() => {
       setProgress(prev => {
-        // Area generation: steady progress with slight randomness (±8-12%)
-        const areaIncrement = 0.4 + Math.random() * 0.2;
-        const newArea = Math.min(prev.area + areaIncrement, 92);
+        // Area generation: faster progress (reaches 100% in ~2-3 seconds)
+        const areaIncrement = 1.2 + Math.random() * 0.4;
+        const newArea = Math.min(prev.area + areaIncrement, 100);
 
-        // Search: starts after area reaches 30%, faster with randomness
-        const searchIncrement = prev.area > 30 
-          ? 0.5 + Math.random() * 0.3 
+        // Search: starts after area reaches 25%, fast progress (reaches 100% quickly after starting)
+        const searchIncrement = prev.area > 25 
+          ? 1.5 + Math.random() * 0.5 
           : 0;
-        const newSearch = Math.min(prev.search + searchIncrement, 92);
+        const newSearch = Math.min(prev.search + searchIncrement, 100);
 
-        // Analysis: starts after search reaches 60%, slower but steady
-        const analysisIncrement = prev.search > 60
-          ? 0.3 + Math.random() * 0.2
+        // Analysis: starts after search reaches 50%, fast progress
+        const analysisIncrement = prev.search > 50
+          ? 1.3 + Math.random() * 0.4
           : 0;
-        const newAnalysis = Math.min(prev.analysis + analysisIncrement, 92);
+        const newAnalysis = Math.min(prev.analysis + analysisIncrement, 100);
 
         return {
           area: newArea,
@@ -54,25 +54,38 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
           analysis: newAnalysis,
         };
       });
-    }, 120); // Update every 120ms for smooth motion (≤180ms requirement)
+    }, 80); // Update every 80ms for faster, smoother motion
 
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  // Snap to completion when loading finishes
+  // Ensure all bars complete when loading finishes
   useEffect(() => {
     if (!isLoading) {
-      // Quick snap to 100% for confident finish (only if bars were progressing)
-      setProgress(prev => {
-        if (prev.area > 0 || prev.search > 0 || prev.analysis > 0) {
-          return { area: 100, search: 100, analysis: 100 };
-        }
-        return prev;
-      });
+      // Complete all bars immediately when loading finishes
+      const completeBars = setInterval(() => {
+        setProgress(prev => {
+          const allDone = prev.area >= 100 && prev.search >= 100 && prev.analysis >= 100;
+          if (allDone) {
+            clearInterval(completeBars);
+            return prev;
+          }
+          return {
+            area: Math.min(prev.area + 5, 100),
+            search: Math.min(prev.search + 5, 100),
+            analysis: Math.min(prev.analysis + 5, 100),
+          };
+        });
+      }, 50); // Fast completion animation
+      
+      return () => clearInterval(completeBars);
     }
   }, [isLoading]);
 
-  if (!isLoading && progress.area === 0 && progress.search === 0 && progress.analysis === 0) {
+  // Keep overlay visible while loading or until all bars complete
+  const allComplete = progress.area >= 100 && progress.search >= 100 && progress.analysis >= 100;
+  if (!isLoading && allComplete) {
+    // Hide after completion
     return null;
   }
 
@@ -201,21 +214,9 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
           </div>
         </div>
 
-        {/* Skeleton Results Preview */}
-        <div className="card-luxury rounded-lg p-5">
-          <div className="text-xs font-light text-label text-tertiary mb-4 uppercase tracking-wider">Preview Results</div>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="w-3 h-3 rounded-full bg-[#334155]/50"></div>
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-[#334155]/30 rounded-md" style={{ width: `${60 + i * 10}%` }}></div>
-                  <div className="h-2 bg-[#334155]/20 rounded-md" style={{ width: `${40 + i * 5}%` }}></div>
-                </div>
-                <div className="w-12 h-6 bg-[#334155]/20 rounded"></div>
-              </div>
-            ))}
-          </div>
+        {/* Results Loading Message */}
+        <div className="card-luxury rounded-lg p-5 text-center">
+          <div className="text-sm font-light text-label text-tertiary">Results loading...</div>
         </div>
       </div>
     </div>
