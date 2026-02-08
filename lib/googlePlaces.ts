@@ -3,6 +3,8 @@
  * Handles place search and details fetching
  */
 
+export type EntityType = 'Public School' | 'Private School' | 'Club';
+
 export interface Place {
   place_id: string;
   name: string;
@@ -19,9 +21,11 @@ export interface Place {
   driveTime?: number;
   distance?: number;
   types?: string[]; // Place types from Google Places API
+  // MVP: Explicit entity type (hard-coded, not inferred at runtime)
+  entityType: EntityType; // REQUIRED: One of 'Public School', 'Private School', or 'Club'
   clubScore?: number; // Club confidence score (0-10+)
-  isClub?: boolean; // True if clubScore >= 3
-  isSchool?: boolean; // True if place is a school
+  isClub?: boolean; // True if clubScore >= 3 (legacy, use entityType instead)
+  isSchool?: boolean; // True if place is a school (legacy, use entityType instead)
   schoolTypes?: string[]; // Detected school types: 'private', 'public', 'elementary', 'middle', 'juniorHigh', 'highSchool'
   ageGroups?: {
     youth: number;
@@ -274,6 +278,8 @@ export function convertGooglePlace(googlePlace: GooglePlaceResult, sport?: strin
     throw new Error(`Invalid coordinates: lat=${lat}, lng=${lng}`);
   }
 
+  // MVP: Entity type will be assigned in search route after school/club detection
+  // For now, default to 'Club' - will be updated based on isSchool and schoolTypes
   return {
     place_id: placeId,
     name,
@@ -285,6 +291,7 @@ export function convertGooglePlace(googlePlace: GooglePlaceResult, sport?: strin
     location: { lat, lng },
     sport,
     types: googlePlace.types, // Include place types for filtering/scoring
+    entityType: 'Club' as EntityType, // Default, will be updated in search route
     // clubScore will be calculated in the search route after conversion
   };
 }

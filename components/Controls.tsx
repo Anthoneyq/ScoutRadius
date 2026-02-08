@@ -11,12 +11,15 @@ interface ControlsProps {
   onLocationInputChange?: (value: string) => void;
 }
 
+// MVP: Supported sports (matches API)
 const SPORTS = [
   { id: 'volleyball', label: 'Volleyball' },
+  { id: 'soccer', label: 'Soccer' },
+  { id: 'baseball', label: 'Baseball' },
+  { id: 'basketball', label: 'Basketball' },
+  { id: 'football', label: 'Football' },
   { id: 'track and field', label: 'Track & Field' },
   { id: 'cross country', label: 'Cross Country' },
-  { id: 'basketball', label: 'Basketball' },
-  { id: 'softball', label: 'Softball' },
 ];
 
 const AGE_GROUPS = [
@@ -26,9 +29,15 @@ const AGE_GROUPS = [
   { id: 'adult', label: 'Adult' },
 ];
 
-const SCHOOL_TYPES = [
-  { id: 'private', label: 'Private School' },
+// MVP: Entity Type filters (hard gates)
+const ENTITY_TYPES = [
   { id: 'public', label: 'Public School' },
+  { id: 'private', label: 'Private School' },
+  { id: 'club', label: 'Club' },
+];
+
+// School level filters (sub-filters, only apply when school type is selected)
+const SCHOOL_LEVELS = [
   { id: 'elementary', label: 'Elementary School' },
   { id: 'middle', label: 'Middle School' },
   { id: 'juniorHigh', label: 'Junior High' },
@@ -85,9 +94,11 @@ export default function Controls(props: ControlsProps) {
   };
 
   const getSchoolTypesDisplayText = () => {
-    if (selectedSchoolTypes.length === 0) return 'School Type';
+    if (selectedSchoolTypes.length === 0) return 'Entity Type';
     if (selectedSchoolTypes.length === 1) {
-      return SCHOOL_TYPES.find(s => s.id === selectedSchoolTypes[0])?.label || selectedSchoolTypes[0];
+      return ENTITY_TYPES.find(s => s.id === selectedSchoolTypes[0])?.label || 
+             SCHOOL_LEVELS.find(s => s.id === selectedSchoolTypes[0])?.label ||
+             selectedSchoolTypes[0];
     }
     return `${selectedSchoolTypes.length} types`;
   };
@@ -355,7 +366,7 @@ export default function Controls(props: ControlsProps) {
 
         <div className="relative min-w-[160px]">
           <label className="block text-xs font-light text-label text-tertiary mb-2">
-            SCHOOL TYPE
+            ENTITY TYPE
           </label>
           <button
             ref={schoolTypesButtonRef}
@@ -396,21 +407,43 @@ export default function Controls(props: ControlsProps) {
                 }}
               >
                 <div className="p-2 space-y-1">
-                  {SCHOOL_TYPES.map((schoolType) => (
+                  {/* MVP: Entity Type filters (Public School, Private School, Club) */}
+                  {ENTITY_TYPES.map((entityType) => (
                     <label
-                      key={schoolType.id}
+                      key={entityType.id}
                       className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#1e293b]/50 cursor-pointer rounded-md transition-luxury"
                     >
                       <input
                         type="checkbox"
-                        checked={selectedSchoolTypes.includes(schoolType.id)}
-                        onChange={() => toggleSchoolType(schoolType.id)}
+                        checked={selectedSchoolTypes.includes(entityType.id)}
+                        onChange={() => toggleSchoolType(entityType.id)}
                         disabled={isLoading}
                         className="w-4 h-4 accent-[#fbbf24] border-[#334155] rounded bg-[#0f172a]/50 focus:ring-[#fbbf24]/30 transition-luxury"
                       />
-                      <span className="text-sm text-secondary font-light">{schoolType.label}</span>
+                      <span className="text-sm text-secondary font-light">{entityType.label}</span>
                     </label>
                   ))}
+                  {/* School level filters (sub-filters) */}
+                  {selectedSchoolTypes.some(id => ['public', 'private'].includes(id)) && (
+                    <>
+                      <div className="border-t border-[#334155]/30 my-1"></div>
+                      {SCHOOL_LEVELS.map((level) => (
+                        <label
+                          key={level.id}
+                          className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#1e293b]/50 cursor-pointer rounded-md transition-luxury"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedSchoolTypes.includes(level.id)}
+                            onChange={() => toggleSchoolType(level.id)}
+                            disabled={isLoading}
+                            className="w-4 h-4 accent-[#fbbf24] border-[#334155] rounded bg-[#0f172a]/50 focus:ring-[#fbbf24]/30 transition-luxury"
+                          />
+                          <span className="text-sm text-secondary font-light">{level.label}</span>
+                        </label>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             </>

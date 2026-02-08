@@ -242,16 +242,53 @@ export default function Home() {
       // Ensure name is a string (should already be converted from displayName.text)
       const displayName = typeof place.name === 'string' ? place.name : '';
       
+      // MVP: Parse address into City, State, ZIP
+      // Address format is typically: "Street Address, City, State ZIP"
+      const addressParts = place.address.split(',').map(s => s.trim());
+      let city = '';
+      let state = '';
+      let zip = '';
+      
+      if (addressParts.length >= 2) {
+        city = addressParts[addressParts.length - 2] || '';
+        const lastPart = addressParts[addressParts.length - 1] || '';
+        // Extract state and ZIP (format: "State ZIP" or "State")
+        const stateZipMatch = lastPart.match(/^([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?$/);
+        if (stateZipMatch) {
+          state = stateZipMatch[1] || '';
+          zip = stateZipMatch[2] || '';
+        } else {
+          // Fallback: treat entire last part as state/zip
+          state = lastPart;
+        }
+      }
+      
+      // MVP: Determine Public/Private from entityType
+      const publicPrivate = place.entityType === 'Public School' 
+        ? 'Public' 
+        : place.entityType === 'Private School' 
+          ? 'Private' 
+          : 'N/A';
+      
+      // MVP: Sports offered (comma-separated)
+      const sportsOffered = place.sports && place.sports.length > 0
+        ? place.sports.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')
+        : place.sport || '';
+      
       return {
-        'Club Name': displayName,
-        'Sport': place.sport || '',
-        'Drive Time (minutes)': place.driveTime ?? '',
-        'Distance (miles)': place.distance ? place.distance.toFixed(2) : '',
+        'Entity Name': displayName,
+        'Entity Type': place.entityType || 'Club',
+        'Public / Private': publicPrivate,
+        'Sports Offered': sportsOffered,
         'Address': place.address,
-        'Phone': place.phone || '',
+        'City': city,
+        'State': state,
+        'ZIP': zip,
         'Website': place.website || '',
-        'Rating': place.rating ? place.rating.toFixed(1) : '',
-        'Review Count': place.review_count?.toString() || '',
+        'Phone': place.phone || '',
+        'Distance (miles)': place.distance ? place.distance.toFixed(2) : '',
+        'Drive Time (minutes)': place.driveTime ?? '',
+        'Confidence Score': place.clubScore ? place.clubScore.toFixed(1) : '',
         'Notes': notes[place.place_id] || '',
         'Tags': tags[place.place_id] || '',
       };

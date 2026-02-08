@@ -2,16 +2,21 @@
  * CSV export utilities
  */
 
+// MVP: CSV export structure (matches MVP requirements)
 export interface ExportRow {
-  'Club Name': string;
-  'Sport': string;
-  'Drive Time (minutes)': number | string;
-  'Distance (miles)': number | string;
+  'Entity Name': string;
+  'Entity Type': string; // Public School, Private School, or Club
+  'Public / Private': string; // Public, Private, or N/A (for clubs)
+  'Sports Offered': string; // Comma-separated list
   'Address': string;
-  'Phone': string;
+  'City': string;
+  'State': string;
+  'ZIP': string;
   'Website': string;
-  'Rating': number | string;
-  'Review Count': number | string;
+  'Phone': string;
+  'Distance (miles)': number | string;
+  'Drive Time (minutes)': number | string;
+  'Confidence Score': number | string;
   'Notes': string;
   'Tags': string;
 }

@@ -383,24 +383,33 @@ export default function ResultsTable(props: ResultsTableProps) {
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm font-light text-primary leading-tight mb-1.5 tracking-tight">{displayName}</h3>
                           <div className="flex items-center gap-2 flex-wrap">
-                            {place.isClub && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#10b981]/15 text-[#10b981] font-light text-label">
-                                Club
+                            {/* MVP: Display explicit entityType (hard-coded, not inferred) */}
+                            {place.entityType && (
+                              <span className={`text-[10px] px-2 py-0.5 rounded-md font-light text-label ${
+                                place.entityType === 'Public School' 
+                                  ? 'bg-[#3b82f6]/15 text-[#3b82f6]'
+                                  : place.entityType === 'Private School'
+                                    ? 'bg-[#8b5cf6]/15 text-[#8b5cf6]'
+                                    : 'bg-[#10b981]/15 text-[#10b981]'
+                              }`}>
+                                {place.entityType}
                               </span>
                             )}
-                            {place.isSchool && place.schoolTypes && place.schoolTypes.length > 0 && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#3b82f6]/15 text-[#3b82f6] font-light text-label">
-                                {place.schoolTypes.map(type => {
-                                  const labels: Record<string, string> = {
-                                    'private': 'Private',
-                                    'public': 'Public',
-                                    'elementary': 'Elementary',
-                                    'middle': 'Middle',
-                                    'juniorHigh': 'Jr High',
-                                    'highSchool': 'High School',
-                                  };
-                                  return labels[type] || type;
-                                }).join(' • ')}
+                            {/* Show school level types if available (elementary, middle, etc.) */}
+                            {place.entityType && (place.entityType === 'Public School' || place.entityType === 'Private School') && place.schoolTypes && place.schoolTypes.length > 0 && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#64748b]/15 text-[#64748b] font-light text-label">
+                                {place.schoolTypes
+                                  .filter(type => !['private', 'public'].includes(type)) // Exclude private/public (already shown in entityType)
+                                  .map(type => {
+                                    const labels: Record<string, string> = {
+                                      'elementary': 'Elementary',
+                                      'middle': 'Middle',
+                                      'juniorHigh': 'Jr High',
+                                      'highSchool': 'High School',
+                                    };
+                                    return labels[type] || type;
+                                  })
+                                  .join(' • ')}
                               </span>
                             )}
                             {/* Confidence tier badge */}
