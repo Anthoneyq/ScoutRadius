@@ -318,21 +318,18 @@ export default function Home() {
     setDragCurrentY(null);
   };
 
-  // Calculate bottom sheet transform
+  // Calculate bottom sheet transform (for results sheet only)
   const getBottomSheetTransform = () => {
     if (dragCurrentY !== null && dragStartY !== null) {
       // During drag, show live position
-      const baseTransform = bottomSheetPosition === 'collapsed' ? '45%' : bottomSheetPosition === 'expanded' ? '0' : '20%';
-      const baseValue = bottomSheetPosition === 'collapsed' ? 45 : bottomSheetPosition === 'expanded' ? 0 : 20;
+      const baseValue = 50; // Results sheet starts at 50% visible
       const dragPercent = (dragCurrentY / window.innerHeight) * 100;
-      return `${Math.max(0, Math.min(45, baseValue + dragPercent))}%`;
+      return `${Math.max(0, Math.min(50, baseValue + dragPercent))}%`;
     }
     
-    // Static positions
-    if (bottomSheetPosition === 'collapsed') return '45%';
-    if (bottomSheetPosition === 'expanded') return '0';
-    if (bottomSheetPosition === 'results') return '20%';
-    return '45%';
+    // Static position for results sheet
+    if (bottomSheetPosition === 'results') return '50%';
+    return '100%'; // Hidden when not in results mode
   };
 
   return (
@@ -354,39 +351,125 @@ export default function Home() {
         searchParams={currentSearchParams || undefined}
       />
 
-      {/* MOBILE BOTTOM SHEET — map-first interface */}
+      {/* MOBILE TOP SEARCH BAR — Google Maps style */}
+      {isMounted && (
+        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-luxury-card/95 backdrop-blur-md border-b border-[#334155]/30">
+          {/* Search Bar */}
+          <div className="px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#fbbf24]/20 flex items-center justify-center">
+                <svg className="w-4 h-4 text-[#fbbf24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
+                placeholder="Starting location..."
+                className="flex-1 px-4 py-2.5 bg-[#0f172a]/50 border border-[#334155]/30 rounded-full text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 text-sm font-light transition-luxury backdrop-blur-sm"
+                disabled={isLoading}
+                onClick={() => setBottomSheetPosition('expanded')}
+                readOnly
+              />
+            </div>
+          </div>
+
+          {/* Category Filter Pills — horizontal scrollable */}
+          <div className="px-4 pb-3 overflow-x-auto">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setBottomSheetPosition('expanded')}
+                className="px-4 py-2 bg-[#0f172a]/50 border border-[#334155]/30 rounded-full text-xs font-light text-secondary hover:bg-[#0f172a]/70 hover:border-[#fbbf24]/30 transition-luxury whitespace-nowrap flex-shrink-0"
+              >
+                Drive Time
+              </button>
+              <button
+                onClick={() => setBottomSheetPosition('expanded')}
+                className="px-4 py-2 bg-[#0f172a]/50 border border-[#334155]/30 rounded-full text-xs font-light text-secondary hover:bg-[#0f172a]/70 hover:border-[#fbbf24]/30 transition-luxury whitespace-nowrap flex-shrink-0"
+              >
+                Sports
+              </button>
+              <button
+                onClick={() => setBottomSheetPosition('expanded')}
+                className="px-4 py-2 bg-[#0f172a]/50 border border-[#334155]/30 rounded-full text-xs font-light text-secondary hover:bg-[#0f172a]/70 hover:border-[#fbbf24]/30 transition-luxury whitespace-nowrap flex-shrink-0"
+              >
+                Schools
+              </button>
+              <button
+                onClick={() => setBottomSheetPosition('expanded')}
+                className="px-4 py-2 bg-[#0f172a]/50 border border-[#334155]/30 rounded-full text-xs font-light text-secondary hover:bg-[#0f172a]/70 hover:border-[#fbbf24]/30 transition-luxury whitespace-nowrap flex-shrink-0"
+              >
+                Age Groups
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE FLOATING ACTION BUTTONS — right side */}
+      {isMounted && (
+        <div className="md:hidden fixed right-4 z-40 flex flex-col gap-3" style={{ top: '140px' }}>
+          {/* Compass/Map Controls Button */}
+          <button
+            className="w-10 h-10 rounded-full bg-luxury-card backdrop-blur-md border border-[#334155]/30 shadow-lg flex items-center justify-center text-primary hover:text-[#fbbf24] transition-luxury"
+            aria-label="Map controls"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* MOBILE FLOATING ANALYZE BUTTON — bottom right, always visible */}
+      {isMounted && bottomSheetPosition !== 'expanded' && (
+        <div className="md:hidden fixed bottom-20 right-4 z-50">
+          <button
+            onClick={() => {
+              if (locationInput.trim() && !isLoading) {
+                // Trigger search via Controls component
+                // For now, expand to show controls
+                setBottomSheetPosition('expanded');
+              } else {
+                setBottomSheetPosition('expanded');
+              }
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-[#fbbf24]/20 to-[#f59e0b]/20 hover:from-[#fbbf24]/30 hover:to-[#f59e0b]/30 text-primary rounded-full font-light disabled:opacity-40 disabled:cursor-not-allowed transition-luxury text-sm text-label border-2 border-[#fbbf24]/40 hover:border-[#fbbf24]/60 backdrop-blur-sm hover:shadow-[0_0_24px_rgba(251,191,36,0.25)] shadow-[0_0_12px_rgba(251,191,36,0.15)] accent-gold font-medium"
+            disabled={isLoading}
+          >
+            {isLoading ? 'ANALYZING...' : 'ANALYZE'}
+          </button>
+        </div>
+      )}
+
+      {/* MOBILE BOTTOM SHEET — results panel */}
       {isMounted && (
         <>
-          {/* Bottom Sheet */}
-          <div
-            className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-luxury-card backdrop-blur-md border-t border-[#334155]/30 rounded-t-2xl shadow-2xl touch-none"
-            style={{
-              height: '65vh',
-              transform: `translateY(${getBottomSheetTransform()})`,
-              transition: dragCurrentY === null ? 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
-            }}
-          >
-            {/* Grab Handle - draggable area */}
+          {/* Bottom Sheet - only shows results */}
+          {bottomSheetPosition === 'results' && places.length > 0 && (
             <div
-              className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
+              className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-luxury-card backdrop-blur-md border-t border-[#334155]/30 rounded-t-2xl shadow-2xl"
+              style={{
+                height: '50vh',
+                transform: `translateY(${getBottomSheetTransform()})`,
+                transition: dragCurrentY === null ? 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+              }}
             >
-              <div className="w-9 h-1 bg-[#334155]/50 rounded-full"></div>
-            </div>
-
-            {/* Sheet Content */}
-            <div className="flex flex-col h-[calc(65vh-16px)] overflow-hidden">
-              {/* Header */}
-              <div className="px-4 py-3 border-b border-[#334155]/30 flex-shrink-0">
-                <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
+              {/* Grab Handle */}
+              <div
+                className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                <div className="w-9 h-1 bg-[#334155]/50 rounded-full"></div>
               </div>
 
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto">
-                {bottomSheetPosition === 'results' && places.length > 0 ? (
-                  // Results View (after search) - scrollable
+              {/* Results Content */}
+              <div className="flex flex-col h-[calc(50vh-16px)] overflow-hidden">
+                <div className="flex-1 overflow-y-auto">
                   <ResultsTable
                     places={places}
                     selectedPlaceId={selectedPlaceId}
@@ -404,51 +487,43 @@ export default function Home() {
                     youthFocusedPercent={youthFocusedPercent}
                     mixedRecreationalPercent={mixedRecreationalPercent}
                   />
-                ) : (
-                  // Controls View (pre-search or expanded)
-                  <div className="px-4 py-4">
-                    <Controls 
-                      onSearch={handleSearch} 
-                      isLoading={isLoading}
-                      selectedAgeGroups={selectedAgeGroups}
-                      onAgeGroupsChange={setSelectedAgeGroups}
-                      locationInput={locationInput}
-                      onLocationInputChange={setLocationInput}
-                    />
-                  </div>
-                )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Tap area to expand when collapsed - invisible overlay */}
-          {bottomSheetPosition === 'collapsed' && (
-            <div
-              className="md:hidden fixed bottom-0 left-0 right-0 h-[35vh] z-30 pointer-events-auto"
-              onClick={(e) => {
-                e.stopPropagation();
-                setBottomSheetPosition('expanded');
-              }}
-            />
+          {/* Controls Modal Sheet — shows when expanded */}
+          {bottomSheetPosition === 'expanded' && (
+            <div className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={() => setBottomSheetPosition('collapsed')}>
+              <div
+                className="absolute bottom-0 left-0 right-0 bg-luxury-card backdrop-blur-md border-t border-[#334155]/30 rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Grab Handle */}
+                <div className="flex justify-center pt-3 pb-2">
+                  <div className="w-9 h-1 bg-[#334155]/50 rounded-full"></div>
+                </div>
+
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-[#334155]/30">
+                  <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
+                </div>
+
+                {/* Controls */}
+                <div className="px-4 py-4">
+                  <Controls 
+                    onSearch={handleSearch} 
+                    isLoading={isLoading}
+                    selectedAgeGroups={selectedAgeGroups}
+                    onAgeGroupsChange={setSelectedAgeGroups}
+                    locationInput={locationInput}
+                    onLocationInputChange={setLocationInput}
+                  />
+                </div>
+              </div>
+            </div>
           )}
         </>
-      )}
-
-      {/* FLOATING ANALYZE BUTTON — when bottom sheet is collapsed */}
-      {isMounted && bottomSheetPosition === 'collapsed' && (
-        <div className="md:hidden fixed bottom-24 left-4 right-4 z-50 pointer-events-auto">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // Expand sheet to show controls
-              setBottomSheetPosition('expanded');
-            }}
-            className="w-full px-8 py-3 bg-gradient-to-r from-[#fbbf24]/20 to-[#f59e0b]/20 hover:from-[#fbbf24]/30 hover:to-[#f59e0b]/30 text-primary rounded-md font-light disabled:opacity-40 disabled:cursor-not-allowed transition-luxury text-sm text-label border-2 border-[#fbbf24]/40 hover:border-[#fbbf24]/60 backdrop-blur-sm hover:shadow-[0_0_24px_rgba(251,191,36,0.25)] shadow-[0_0_12px_rgba(251,191,36,0.15)] accent-gold font-medium"
-            disabled={isLoading}
-          >
-            {isLoading ? 'ANALYZING...' : 'ANALYZE AREA'}
-          </button>
-        </div>
       )}
 
       {/* DESKTOP TOP CONTROL BAR — hidden on mobile */}
