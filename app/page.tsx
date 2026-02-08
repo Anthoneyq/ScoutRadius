@@ -27,12 +27,12 @@ export default function Home() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tags, setTags] = useState<Record<string, string>>({});
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state - starts closed
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // Mobile sidebar collapsed state (shows icons)
+  // Removed unused sidebar state variables (replaced by bottom sheet)
   const [locationInput, setLocationInput] = useState(''); // Shared location input state
   const [isMounted, setIsMounted] = useState(false); // Prevent hydration issues
   const [filterSheetState, setFilterSheetState] = useState<SheetState>('collapsed'); // Mobile filter bottom sheet state
   const [resultsSheetState, setResultsSheetState] = useState<SheetState>('collapsed'); // Mobile results bottom sheet state
+  const [mobileViewMode, setMobileViewMode] = useState<'filters' | 'results'>('filters'); // MVP Option A: Toggle between Filters and Results
   const [currentSearchParams, setCurrentSearchParams] = useState<{
     sports?: string[];
     schoolTypes?: string[];
@@ -194,10 +194,11 @@ export default function Home() {
       
       setPlaces(foundPlaces);
       
-      // Collapse filter sheet and expand results sheet on mobile after search completes
-      setFilterSheetState('collapsed');
+      // MVP Option A: Switch to Results view on mobile after search completes
       if (foundPlaces.length > 0) {
+        setMobileViewMode('results');
         setResultsSheetState('half');
+        setFilterSheetState('collapsed');
       }
       
       // Log helpful debug info if no results
@@ -337,9 +338,9 @@ export default function Home() {
         searchParams={currentSearchParams || undefined}
       />
 
-      {/* MOBILE TOP SEARCH BAR — Apple Maps style */}
+      {/* MOBILE TOP SEARCH BAR — Apple Maps style (< 1024px) */}
       {isMounted && (
-        <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-luxury-card/95 backdrop-blur-md border-b border-[#334155]/30">
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-luxury-card/95 backdrop-blur-md border-b border-[#334155]/30">
           <div className="px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#fbbf24]/20 flex items-center justify-center">
@@ -363,66 +364,99 @@ export default function Home() {
         </div>
       )}
 
-      {/* MOBILE FILTER BOTTOM SHEET — Apple Maps style (lower z-index) */}
-      {isMounted && places.length === 0 && (
-        <div className="md:hidden">
+      {/* MOBILE BOTTOM SHEET — Apple Maps style (< 1024px) */}
+      {/* MVP Option A: Toggle between Filters and Results views */}
+      {isMounted && (
+        <div className="lg:hidden">
           <BottomSheet
-            state={filterSheetState}
-            onStateChange={setFilterSheetState}
+            state={mobileViewMode === 'results' ? resultsSheetState : filterSheetState}
+            onStateChange={mobileViewMode === 'results' ? setResultsSheetState : setFilterSheetState}
             collapsedHeight="64px"
-            halfHeight="45vh"
+            halfHeight={mobileViewMode === 'results' ? "50vh" : "45vh"}
             fullHeight="85vh"
           >
-            <MobileFilters
-              onSearch={handleSearch}
-              isLoading={isLoading}
-              selectedAgeGroups={selectedAgeGroups}
-              onAgeGroupsChange={setSelectedAgeGroups}
-              locationInput={locationInput}
-              onLocationInputChange={setLocationInput}
-              onSearchTriggered={() => setFilterSheetState('collapsed')}
-            />
+            {mobileViewMode === 'results' && places.length > 0 ? (
+              // Results View (after search)
+              <div className="h-full flex flex-col">
+                {/* Toggle Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[#334155]/30 flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      setMobileViewMode('filters');
+                      setResultsSheetState('collapsed');
+                      setFilterSheetState('half');
+                    }}
+                    className="text-xs font-light text-label text-tertiary hover:text-secondary transition-luxury"
+                  >
+                    ← Filters
+                  </button>
+                  <h2 className="text-xs font-light text-label text-tertiary">RESULTS</h2>
+                  <div className="w-12"></div> {/* Spacer */}
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  <ResultsTable
+                    places={places}
+                    selectedPlaceId={selectedPlaceId}
+                    onPlaceClick={handlePlaceClick}
+                    notes={notes}
+                    tags={tags}
+                    onNotesChange={handleNotesChange}
+                    onTagsChange={handleTagsChange}
+                    onExport={handleExport}
+                    selectedAgeGroups={selectedAgeGroups}
+                    totalClubs={totalClubs}
+                    highConfidenceClubs={highConfidenceClubs}
+                    avgDriveTime={avgDriveTime}
+                    avgDistance={avgDistance}
+                    youthFocusedPercent={youthFocusedPercent}
+                    mixedRecreationalPercent={mixedRecreationalPercent}
+                    schoolTypes={currentSchoolTypes}
+                    selectedSports={currentSports}
+                  />
+                </div>
+              </div>
+            ) : (
+              // Filters View (before search or when toggled back)
+              <div className="h-full flex flex-col">
+                {/* Toggle Header (only show if results exist) */}
+                {places.length > 0 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#334155]/30 flex-shrink-0">
+                    <h2 className="text-xs font-light text-label text-tertiary">FILTERS</h2>
+                    <button
+                      onClick={() => {
+                        setMobileViewMode('results');
+                        setFilterSheetState('collapsed');
+                        setResultsSheetState('half');
+                      }}
+                      className="text-xs font-light text-label text-tertiary hover:text-secondary transition-luxury"
+                    >
+                      Results →
+                    </button>
+                  </div>
+                )}
+                <div className="flex-1 overflow-y-auto">
+                  <MobileFilters
+                    onSearch={handleSearch}
+                    isLoading={isLoading}
+                    selectedAgeGroups={selectedAgeGroups}
+                    onAgeGroupsChange={setSelectedAgeGroups}
+                    locationInput={locationInput}
+                    onLocationInputChange={setLocationInput}
+                    onSearchTriggered={() => {
+                      setMobileViewMode('results');
+                      setFilterSheetState('collapsed');
+                      setResultsSheetState('half');
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </BottomSheet>
         </div>
       )}
 
-      {/* MOBILE RESULTS BOTTOM SHEET — shows after search (replaces filter sheet) */}
-      {isMounted && places.length > 0 && (
-        <div className="md:hidden">
-          <BottomSheet
-            state={resultsSheetState}
-            onStateChange={setResultsSheetState}
-            collapsedHeight="64px"
-            halfHeight="50vh"
-            fullHeight="85vh"
-          >
-            <div className="h-full overflow-y-auto">
-              <ResultsTable
-                places={places}
-                selectedPlaceId={selectedPlaceId}
-                onPlaceClick={handlePlaceClick}
-                notes={notes}
-                tags={tags}
-                onNotesChange={handleNotesChange}
-                onTagsChange={handleTagsChange}
-                onExport={handleExport}
-                selectedAgeGroups={selectedAgeGroups}
-                totalClubs={totalClubs}
-                highConfidenceClubs={highConfidenceClubs}
-                avgDriveTime={avgDriveTime}
-                avgDistance={avgDistance}
-                youthFocusedPercent={youthFocusedPercent}
-                mixedRecreationalPercent={mixedRecreationalPercent}
-                schoolTypes={currentSchoolTypes}
-                selectedSports={currentSports}
-              />
-            </div>
-          </BottomSheet>
-        </div>
-      )}
-
-      {/* DESKTOP TOP CONTROL BAR — hidden on mobile */}
-      <div className="hidden md:block absolute top-0 left-0 right-0 z-30 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30">
+      {/* DESKTOP TOP CONTROL BAR — visible on desktop (≥ 1024px) and tablet (768-1023px) */}
+      <div className="hidden lg:block absolute top-0 left-0 right-0 z-30 bg-luxury-card backdrop-blur-md border-b border-[#334155]/30">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-sm font-light text-label text-secondary tracking-wider">SCOUTRADIUS</h1>
@@ -442,8 +476,8 @@ export default function Home() {
       {/* USAGE DISPLAY — luxury overlay */}
       <UsageDisplay />
 
-      {/* LEFT STATS CARDS — luxury overlay, floating (hidden on mobile) */}
-      <div className="hidden md:block absolute left-5 top-44 z-20 space-y-3 pointer-events-none">
+      {/* LEFT STATS CARDS — luxury overlay, floating (visible on desktop ≥ 1024px and tablet 768-1023px) */}
+      <div className="hidden lg:block absolute left-5 top-44 z-20 space-y-3 pointer-events-none">
         <div className="pointer-events-auto">
           <div className="card-luxury rounded-lg px-5 py-4">
             <div className="text-2xl font-light text-numeric text-primary">{totalClubs}</div>
@@ -482,8 +516,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* DESKTOP RIGHT RESULTS PANEL — hidden on mobile (shown in sidebar instead) */}
-      <div className="hidden md:block absolute right-5 top-44 bottom-5 z-20 w-[420px] pointer-events-none">
+      {/* DESKTOP RIGHT RESULTS PANEL — visible on desktop (≥ 1024px) and tablet (768-1023px) */}
+      <div className="hidden lg:block absolute right-5 top-44 bottom-5 z-20 w-[420px] pointer-events-none">
         <div className="h-full pointer-events-auto flex flex-col bg-luxury-card backdrop-blur-md border border-[#334155]/30 rounded-lg overflow-hidden">
           {/* ALWAYS MOUNTED — never conditionally rendered */}
           <ResultsTable

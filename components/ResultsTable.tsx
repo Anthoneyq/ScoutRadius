@@ -204,8 +204,8 @@ export default function ResultsTable(props: ResultsTableProps) {
           </button>
         </div>
         
-        {/* Mobile Stats - shown only on mobile, hidden on desktop */}
-        <div className="md:hidden grid grid-cols-2 gap-2 mt-2">
+        {/* Mobile Stats - shown only on mobile (< 1024px), hidden on desktop */}
+        <div className="lg:hidden grid grid-cols-2 gap-2 mt-2">
           <div className="card-luxury rounded-md px-3 py-2">
             <div className="text-lg font-light text-numeric text-primary">{totalClubs}</div>
             <div className="text-[9px] text-label text-tertiary mt-0.5">TOTAL</div>
