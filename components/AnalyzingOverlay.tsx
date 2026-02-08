@@ -59,10 +59,12 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  // Keep overlay visible while loading or until all bars complete
+  // Only show overlay when actively loading or when there's progress to display
+  const hasProgress = progress.area > 0 || progress.search > 0 || progress.analysis > 0;
   const allComplete = progress.area >= 100 && progress.search >= 100 && progress.analysis >= 100;
-  if (!isLoading && allComplete) {
-    // Hide after completion
+  
+  // Hide if not loading and either no progress has started or all bars are complete
+  if (!isLoading && (!hasProgress || allComplete)) {
     return null;
   }
 
