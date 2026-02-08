@@ -11,6 +11,7 @@ interface BottomSheetProps {
   collapsedHeight?: string;
   halfHeight?: string;
   fullHeight?: string;
+  zIndex?: number;
 }
 
 const SNAP_POINTS = {
@@ -26,6 +27,7 @@ export default function BottomSheet({
   collapsedHeight = SNAP_POINTS.collapsed,
   halfHeight = SNAP_POINTS.half,
   fullHeight = SNAP_POINTS.full,
+  zIndex = 40,
 }: BottomSheetProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
@@ -114,11 +116,13 @@ export default function BottomSheet({
   return (
     <div
       ref={sheetRef}
-      className="fixed bottom-0 left-0 right-0 z-40 bg-luxury-card backdrop-blur-md border-t border-[#334155]/30 rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out pointer-events-auto"
+      className="fixed bottom-0 left-0 right-0 bg-luxury-card backdrop-blur-md border-t border-[#334155]/30 rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out"
       style={{
         height: getHeight(),
         transform: isDragging && currentY !== 0 ? `translateY(${currentY}px)` : 'none',
         transition: isDragging ? 'none' : 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        zIndex,
+        ...(state === 'collapsed' ? { pointerEvents: 'none' } : { pointerEvents: 'auto' }), // Allow map interaction when collapsed
       }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -128,6 +132,7 @@ export default function BottomSheet({
       <div 
         className="drag-handle flex justify-center py-3 cursor-grab active:cursor-grabbing"
         onPointerDown={handlePointerDown}
+        style={{ pointerEvents: 'auto' }} // Always allow dragging handle
       >
         <div className="w-10 h-1.5 rounded-full bg-[#334155]/50" />
       </div>

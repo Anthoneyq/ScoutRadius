@@ -321,8 +321,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* MOBILE FILTER BOTTOM SHEET — Apple Maps style */}
-      {isMounted && (
+      {/* MOBILE FILTER BOTTOM SHEET — Apple Maps style (lower z-index) */}
+      {isMounted && places.length === 0 && (
         <div className="md:hidden">
           <BottomSheet
             state={filterSheetState}
@@ -344,7 +344,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* MOBILE RESULTS BOTTOM SHEET — shows after search (higher z-index than filter sheet) */}
+      {/* MOBILE RESULTS BOTTOM SHEET — shows after search (replaces filter sheet) */}
       {isMounted && places.length > 0 && (
         <div className="md:hidden">
           <BottomSheet
