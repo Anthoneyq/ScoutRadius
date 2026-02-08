@@ -115,7 +115,7 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
   const isSearchingAll = !hasSports && !hasSchools; // Default search (all sports)
 
   return (
-    <div className="absolute inset-0 z-50 bg-luxury-dark/95 backdrop-blur-md flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] bg-luxury-dark/95 backdrop-blur-md flex items-center justify-center">
       <div className="w-full max-w-2xl px-6 py-8">
         {/* Header */}
         <div className="text-center mb-8">

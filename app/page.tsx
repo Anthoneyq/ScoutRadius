@@ -371,10 +371,9 @@ export default function Home() {
                 value={locationInput}
                 onChange={(e) => setLocationInput(e.target.value)}
                 placeholder="Starting location..."
-                className="flex-1 px-4 py-2.5 bg-[#0f172a]/50 border border-[#334155]/30 rounded-full text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 text-sm font-light transition-luxury backdrop-blur-sm"
+                className="flex-1 px-4 py-2.5 bg-[#0f172a]/50 border border-[#334155]/30 rounded-full text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 text-base font-light transition-luxury backdrop-blur-sm"
+                style={{ fontSize: '16px' }}
                 disabled={isLoading}
-                onClick={() => setBottomSheetPosition('expanded')}
-                readOnly
               />
             </div>
           </div>

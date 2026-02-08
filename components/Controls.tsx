@@ -260,7 +260,8 @@ export default function Controls(props: ControlsProps) {
             value={locationInput}
             onChange={(e) => setLocationInput(e.target.value)}
             placeholder="Address or coordinates"
-            className="w-full px-3.5 py-2.5 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 text-sm font-light transition-luxury backdrop-blur-sm"
+            className="w-full px-3.5 py-2.5 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 text-base font-light transition-luxury backdrop-blur-sm"
+            style={{ fontSize: '16px' }}
             disabled={isLoading}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !isSearchDisabled) {
@@ -278,7 +279,8 @@ export default function Controls(props: ControlsProps) {
             value={driveTime}
             onChange={(e) => setDriveTime(Number(e.target.value))}
             disabled={isLoading}
-            className="w-full px-3.5 py-2.5 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-primary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 text-sm font-light transition-luxury backdrop-blur-sm"
+            className="w-full px-3.5 py-2.5 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-primary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 text-base font-light transition-luxury backdrop-blur-sm"
+            style={{ fontSize: '16px' }}
           >
             {Array.from({ length: 12 }, (_, i) => {
               const minutes = (i + 1) * 5;
