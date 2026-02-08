@@ -22,7 +22,7 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
   const schoolTypes = searchParams?.schoolTypes || [];
   const location = searchParams?.location || '';
 
-  // Timer-based progress animation - faster and more realistic
+  // Timer-based progress animation - gradual but faster than original
   useEffect(() => {
     if (!isLoading) {
       // Reset progress when loading stops
@@ -32,19 +32,19 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
 
     const interval = setInterval(() => {
       setProgress(prev => {
-        // Area generation: faster progress (reaches 100% in ~2-3 seconds)
-        const areaIncrement = 1.2 + Math.random() * 0.4;
+        // Area generation: steady progress with slight randomness (faster than original)
+        const areaIncrement = 0.6 + Math.random() * 0.2;
         const newArea = Math.min(prev.area + areaIncrement, 100);
 
-        // Search: starts after area reaches 25%, fast progress (reaches 100% quickly after starting)
-        const searchIncrement = prev.area > 25 
-          ? 1.5 + Math.random() * 0.5 
+        // Search: starts after area reaches 30%, steady progress
+        const searchIncrement = prev.area > 30 
+          ? 0.7 + Math.random() * 0.3 
           : 0;
         const newSearch = Math.min(prev.search + searchIncrement, 100);
 
-        // Analysis: starts after search reaches 50%, fast progress
-        const analysisIncrement = prev.search > 50
-          ? 1.3 + Math.random() * 0.4
+        // Analysis: starts after search reaches 60%, steady progress
+        const analysisIncrement = prev.search > 60
+          ? 0.5 + Math.random() * 0.2
           : 0;
         const newAnalysis = Math.min(prev.analysis + analysisIncrement, 100);
 
@@ -54,32 +54,9 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
           analysis: newAnalysis,
         };
       });
-    }, 80); // Update every 80ms for faster, smoother motion
+    }, 100); // Update every 100ms (faster than original 120ms, but allows gradual progress)
 
     return () => clearInterval(interval);
-  }, [isLoading]);
-
-  // Ensure all bars complete when loading finishes
-  useEffect(() => {
-    if (!isLoading) {
-      // Complete all bars immediately when loading finishes
-      const completeBars = setInterval(() => {
-        setProgress(prev => {
-          const allDone = prev.area >= 100 && prev.search >= 100 && prev.analysis >= 100;
-          if (allDone) {
-            clearInterval(completeBars);
-            return prev;
-          }
-          return {
-            area: Math.min(prev.area + 5, 100),
-            search: Math.min(prev.search + 5, 100),
-            analysis: Math.min(prev.analysis + 5, 100),
-          };
-        });
-      }, 50); // Fast completion animation
-      
-      return () => clearInterval(completeBars);
-    }
   }, [isLoading]);
 
   // Keep overlay visible while loading or until all bars complete

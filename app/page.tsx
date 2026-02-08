@@ -186,9 +186,6 @@ export default function Home() {
         }
       }
       
-      // Small delay to ensure progress bars complete before showing results
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
       setPlaces(foundPlaces);
       
       // Expand bottom sheet to results view on mobile after search completes
