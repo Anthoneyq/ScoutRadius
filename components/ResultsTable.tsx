@@ -19,6 +19,8 @@ interface ResultsTableProps {
   avgDistance?: number;
   youthFocusedPercent?: number;
   mixedRecreationalPercent?: number;
+  schoolTypes?: string[]; // Selected school types for dynamic header
+  selectedSports?: string[]; // Selected sports for dynamic header
 }
 
 type SortField = 'name' | 'sport' | 'driveTime' | 'distance' | 'rating' | 'review_count';
@@ -41,6 +43,8 @@ export default function ResultsTable(props: ResultsTableProps) {
     avgDistance = 0,
     youthFocusedPercent = 0,
     mixedRecreationalPercent = 0,
+    schoolTypes = [],
+    selectedSports = [],
   } = props || {};
   const [sortField, setSortField] = useState<SortField>('driveTime');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -180,7 +184,18 @@ export default function ResultsTable(props: ResultsTableProps) {
       {/* Header with Export - luxury styling */}
       <div className="px-5 py-3.5 border-b border-[#334155]/30 flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xs font-light text-label text-tertiary">RANKED RESULTS</h2>
+          <div>
+            <h2 className="text-xs font-light text-label text-tertiary">RANKED RESULTS</h2>
+            {/* Dynamic filter message */}
+            {schoolTypes.includes('public') && (
+              <p className="text-[10px] text-tertiary font-light mt-0.5">
+                {selectedSports.length > 0 
+                  ? `Public Schools with ${selectedSports.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')} (Confirmed)`
+                  : 'Public Schools (All Sports)'
+                }
+              </p>
+            )}
+          </div>
           <button
             onClick={onExport}
             className="px-3 py-1.5 text-xs font-light text-label text-tertiary hover:text-secondary transition-luxury hover:opacity-80"
@@ -239,10 +254,32 @@ export default function ResultsTable(props: ResultsTableProps) {
           /* Section 3: Empty State - Never Blank */
           <div className="px-5 py-10">
             <div className="card-luxury rounded-lg px-5 py-8 text-center">
-              <div className="text-sm font-light text-secondary mb-2.5">No qualifying clubs under current constraints.</div>
-              <div className="text-xs text-label text-tertiary opacity-70 mt-3">
-                ADJUST DRIVE TIME OR TOGGLE PRIORITY
-              </div>
+              {schoolTypes.includes('public') && selectedSports.length > 0 ? (
+                <>
+                  <div className="text-sm font-light text-secondary mb-2.5">
+                    No public schools with confirmed {selectedSports.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')} programs in this area.
+                  </div>
+                  <div className="text-xs text-label text-tertiary opacity-70 mt-3">
+                    TRY ADJUSTING DRIVE TIME OR REMOVING SPORT FILTER
+                  </div>
+                </>
+              ) : schoolTypes.includes('public') ? (
+                <>
+                  <div className="text-sm font-light text-secondary mb-2.5">
+                    No public schools found in this area.
+                  </div>
+                  <div className="text-xs text-label text-tertiary opacity-70 mt-3">
+                    TRY ADJUSTING DRIVE TIME OR LOCATION
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm font-light text-secondary mb-2.5">No qualifying clubs under current constraints.</div>
+                  <div className="text-xs text-label text-tertiary opacity-70 mt-3">
+                    ADJUST DRIVE TIME OR TOGGLE PRIORITY
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ) : (

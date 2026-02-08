@@ -102,6 +102,9 @@ export default function Home() {
     }
   }, [tags]);
 
+  const [currentSports, setCurrentSports] = useState<string[]>([]);
+  const [currentSchoolTypes, setCurrentSchoolTypes] = useState<string[]>([]);
+
   const handleSearch = async (
     searchOrigin: { lat: number; lng: number },
     driveTime: number,
@@ -112,12 +115,14 @@ export default function Home() {
     setOrigin(searchOrigin);
     setSelectedPlaceId(null);
     
-    // Store search parameters for the analyzing overlay
+    // Store search parameters for the analyzing overlay and ResultsTable
     setCurrentSearchParams({
       sports,
       schoolTypes,
       location: locationInput,
     });
+    setCurrentSports(sports);
+    setCurrentSchoolTypes(schoolTypes || []);
 
     try {
       // Generate isochrone first
@@ -371,6 +376,8 @@ export default function Home() {
                 avgDistance={avgDistance}
                 youthFocusedPercent={youthFocusedPercent}
                 mixedRecreationalPercent={mixedRecreationalPercent}
+                schoolTypes={currentSchoolTypes}
+                selectedSports={currentSports}
               />
             </div>
           </BottomSheet>
@@ -458,6 +465,8 @@ export default function Home() {
             avgDistance={avgDistance}
             youthFocusedPercent={youthFocusedPercent}
             mixedRecreationalPercent={mixedRecreationalPercent}
+            schoolTypes={currentSchoolTypes}
+            selectedSports={currentSports}
           />
         </div>
       </div>

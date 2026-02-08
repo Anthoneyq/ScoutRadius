@@ -85,6 +85,75 @@ const EXCLUDED_KEYWORDS = [
   'health club',
 ];
 
+/**
+ * STRICT FILTERING LOGIC (Authoritative)
+ * School Type = "Public School" is a HARD FILTER
+ * Sport is a secondary, conditional filter with strict confidence requirements
+ */
+function filterResultsStrict(
+  entity: Place,
+  filters: {
+    schoolTypes?: string[];
+    sports?: string[];
+  }
+): boolean {
+  // HARD GATE: School type filter
+  if (filters.schoolTypes && filters.schoolTypes.length > 0) {
+    // If public school filter is active
+    if (filters.schoolTypes.includes('public')) {
+      // Must be a school AND must be public
+      if (!entity.isSchool) return false;
+      if (!entity.schoolTypes || !entity.schoolTypes.includes('public')) return false;
+      
+      // If no sport selected, show all public schools
+      if (!filters.sports || filters.sports.length === 0) {
+        return true;
+      }
+      
+      // CONDITIONAL SPORT FILTER (strict)
+      // If sport is selected, must have that sport with 100% confidence
+      if (filters.sports.length > 0) {
+        const selectedSport = filters.sports[0].toLowerCase(); // Use first sport for now
+        
+        // Must have sports array
+        if (!entity.sports || entity.sports.length === 0) return false;
+        
+        // Must include the selected sport
+        const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
+        if (!hasSport) return false;
+        
+        // Must have 100% confidence
+        const confidence = entity.sportsConfidence?.[selectedSport];
+        if (confidence !== 1.0) return false;
+      }
+      
+      return true;
+    }
+    
+    // Handle other school types (private, elementary, etc.)
+    // For now, apply same strict logic
+    if (!entity.isSchool) return false;
+    if (!entity.schoolTypes || entity.schoolTypes.length === 0) return false;
+    
+    // Must match at least one selected school type
+    const matchesType = entity.schoolTypes.some(type => filters.schoolTypes!.includes(type));
+    if (!matchesType) return false;
+    
+    // If sport selected, apply strict sport filter
+    if (filters.sports && filters.sports.length > 0) {
+      const selectedSport = filters.sports[0].toLowerCase();
+      if (!entity.sports || !entity.sports.includes(selectedSport)) return false;
+      const confidence = entity.sportsConfidence?.[selectedSport];
+      if (confidence !== 1.0) return false;
+    }
+    
+    return true;
+  }
+  
+  // If no school type filter, return true (let other filters handle it)
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Get user ID from Clerk auth (may fail if Clerk not configured)
@@ -304,6 +373,39 @@ export async function POST(request: NextRequest) {
                 }
                 
                 place.schoolTypes = detectedSchoolTypes.length > 0 ? detectedSchoolTypes : ['highSchool']; // Default to high school if unclear
+                
+                // STRICT SPORTS DETECTION FOR SCHOOLS
+                // Only set confidence to 1.0 if sport is explicitly confirmed
+                // For now, if school was found via sport search AND name contains sport, set to 1.0
+                // Otherwise, set to 0.0 (will be filtered out if sport filter is active)
+                if (sport) {
+                  const sportLower = sport.toLowerCase();
+                  const nameContainsSport = placeName.includes(sportLower);
+                  
+                  // Initialize sports array if needed
+                  if (!place.sports) {
+                    place.sports = [];
+                  }
+                  if (!place.sportsConfidence) {
+                    place.sportsConfidence = {};
+                  }
+                  
+                  // Only set to 1.0 if explicitly confirmed (name contains sport)
+                  // This is strict - no inference, no guessing
+                  if (nameContainsSport) {
+                    if (!place.sports.includes(sportLower)) {
+                      place.sports.push(sportLower);
+                    }
+                    place.sportsConfidence[sportLower] = 1.0;
+                  } else {
+                    // School might have sport, but we can't confirm with 100% certainty
+                    // Set confidence to 0.0 so it won't pass strict filter
+                    if (!place.sports.includes(sportLower)) {
+                      place.sports.push(sportLower);
+                    }
+                    place.sportsConfidence[sportLower] = 0.0;
+                  }
+                }
               }
               
               // HARD EXCLUSION: Retail sporting goods stores
@@ -572,6 +674,33 @@ export async function POST(request: NextRequest) {
               place.isSchool = true;
               place.schoolTypes = detectedSchoolTypes.length > 0 ? detectedSchoolTypes : ['unknown'];
               
+              // STRICT SPORTS DETECTION FOR SCHOOLS
+              // Only set confidence to 1.0 if sport is explicitly confirmed
+              // For schools found via school search, we don't have sport context
+              // So set confidence to 0.0 (will be filtered out if sport filter is active)
+              if (sports && sports.length > 0) {
+                if (!place.sports) {
+                  place.sports = [];
+                }
+                if (!place.sportsConfidence) {
+                  place.sportsConfidence = {};
+                }
+                
+                // Check if school name contains any of the selected sports
+                const placeNameLower = place.name.toLowerCase();
+                for (const sport of sports) {
+                  const sportLower = sport.toLowerCase();
+                  const nameContainsSport = placeNameLower.includes(sportLower);
+                  
+                  if (!place.sports.includes(sportLower)) {
+                    place.sports.push(sportLower);
+                  }
+                  
+                  // Only set to 1.0 if explicitly confirmed (name contains sport)
+                  place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.0;
+                }
+              }
+              
               // HARD EXCLUSION: Retail sporting goods stores
               if (isRetailSportStore({
                 name: place.name,
@@ -741,21 +870,32 @@ export async function POST(request: NextRequest) {
 
     const uniqueRawPlaces = deduplicatePlaces(rawPlacesBeforeFiltering);
     
+    // APPLY STRICT FILTERING LOGIC (before final return)
+    // School Type = "Public School" is a HARD FILTER
+    // Sport filter requires 100% confidence
+    const filteredPlaces = uniquePlaces.filter(place => {
+      return filterResultsStrict(place, {
+        schoolTypes: schoolTypes.length > 0 ? schoolTypes : undefined,
+        sports: sports.length > 0 ? sports : undefined,
+      });
+    });
+    
+    console.log(`[Strict Filter] Before: ${uniquePlaces.length}, After: ${filteredPlaces.length}, School types: ${schoolTypes.join(', ') || 'none'}, Sports: ${sports.join(', ') || 'none'}`);
+    
     // Log search pipeline results
-    console.log(`Search pipeline: raw=${uniqueRawPlaces.length}, afterPolygon=${totalResultsAfterPolygonFilter}, afterDriveTime=${totalResultsAfterDriveTimeFilter}, retail excluded=${retailExcludedCount}, final=${uniquePlaces.length}`);
+    console.log(`Search pipeline: raw=${uniqueRawPlaces.length}, afterPolygon=${totalResultsAfterPolygonFilter}, afterDriveTime=${totalResultsAfterDriveTimeFilter}, retail excluded=${retailExcludedCount}, afterStrictFilter=${filteredPlaces.length}, final=${filteredPlaces.length}`);
     
     // Calculate external intelligence signal counts (for logging and response)
-    const osmConfirmedCount = uniquePlaces.filter(p => p.osmConfirmed).length;
-    const aiClassifiedCount = uniquePlaces.filter(p => p.aiClassification).length;
-    const avgConfidenceScore = uniquePlaces.length > 0
-      ? uniquePlaces.reduce((sum, p) => sum + (p.clubScore ?? 0), 0) / uniquePlaces.length
+    const osmConfirmedCount = filteredPlaces.filter(p => p.osmConfirmed).length;
+    const aiClassifiedCount = filteredPlaces.filter(p => p.aiClassification).length;
+    const avgConfidenceScore = filteredPlaces.length > 0
+      ? filteredPlaces.reduce((sum, p) => sum + (p.clubScore ?? 0), 0) / filteredPlaces.length
       : 0;
     
     console.log(`External intelligence: OSM confirmed=${osmConfirmedCount}, AI classified=${aiClassifiedCount}, retail excluded=${retailExcludedCount}, avg confidence=${avgConfidenceScore.toFixed(1)}`);
     
-    // If we found places but filtering removed them all, return raw results for debugging
-    // This helps identify if the issue is with filtering logic vs API calls
-    if (uniqueRawPlaces.length > 0 && uniquePlaces.length === 0) {
+    // If we found places but filtering removed them all, return empty with helpful message
+    if (uniqueRawPlaces.length > 0 && filteredPlaces.length === 0) {
       console.warn(`All ${uniqueRawPlaces.length} places filtered out. Returning first 5 raw places for debugging.`);
       if (isochronePolygon) {
         const polygonCoords = isochronePolygon.geometry.coordinates[0];
@@ -860,7 +1000,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ 
-      places: uniquePlaces,
+      places: filteredPlaces,
       debug: {
         totalResultsFound,
         rawPlacesCount: uniqueRawPlaces.length,
@@ -868,11 +1008,15 @@ export async function POST(request: NextRequest) {
         totalResultsAfterDriveTimeFilter,
         retailExcludedCount, // Retail sporting goods stores excluded
         uniquePlacesCount: uniquePlaces.length,
+        filteredPlacesCount: filteredPlaces.length,
         hasIsochrone: !!isochronePolygon,
         // External intelligence signals
         osmConfirmedCount,
         aiClassifiedCount,
         avgConfidence: Math.round(avgConfidenceScore * 10) / 10,
+        // Filter info
+        schoolTypesFilter: schoolTypes.length > 0 ? schoolTypes : null,
+        sportsFilter: sports.length > 0 ? sports : null,
       }
     });
   } catch (error) {

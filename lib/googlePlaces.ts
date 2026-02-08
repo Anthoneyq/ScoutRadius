@@ -37,6 +37,9 @@ export interface Place {
     confidence: number;
   };
   confidenceSignals?: string[]; // Explanation tags for scoring
+  // Sports data for schools
+  sports?: string[]; // List of sports offered (for schools)
+  sportsConfidence?: Record<string, number>; // Confidence score (0.0-1.0) for each sport
 }
 
 export interface GooglePlaceResult {
