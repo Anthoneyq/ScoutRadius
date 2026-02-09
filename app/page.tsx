@@ -113,26 +113,6 @@ export default function Home() {
 
   const [currentSports, setCurrentSports] = useState<string[]>([]);
   const [currentSchoolTypes, setCurrentSchoolTypes] = useState<string[]>([]);
-  
-  // Left sidebar filter state (Pergamum-style)
-  const [entityFilters, setEntityFilters] = useState<string[]>([]);
-  const [sportFilters, setSportFilters] = useState<string[]>([]);
-  
-  const toggleEntityFilter = (filter: string) => {
-    setEntityFilters(prev => 
-      prev.includes(filter) 
-        ? prev.filter(f => f !== filter)
-        : [...prev, filter]
-    );
-  };
-  
-  const toggleSportFilter = (filter: string) => {
-    setSportFilters(prev => 
-      prev.includes(filter) 
-        ? prev.filter(f => f !== filter)
-        : [...prev, filter]
-    );
-  };
 
   // Consolidated mobile sheet transition helpers (prevents desync)
   const goToResultsView = useCallback(() => {
@@ -153,10 +133,6 @@ export default function Home() {
     sports: string[],
     schoolTypes?: string[]
   ) => {
-    // Use sidebar filters if set, otherwise use Controls filters
-    const finalSports = sportFilters.length > 0 ? sportFilters : sports;
-    const finalSchoolTypes = entityFilters.length > 0 ? entityFilters : schoolTypes;
-    
     // Reset stage to idle when new search begins (only place we reset to idle)
     setAnalysisStage("idle");
     setIsLoading(true);
@@ -166,12 +142,12 @@ export default function Home() {
     
     // Store search parameters for the analyzing overlay and ResultsTable
     setCurrentSearchParams({
-      sports: finalSports,
-      schoolTypes: finalSchoolTypes,
+      sports,
+      schoolTypes,
       location: locationInput,
     });
-    setCurrentSports(finalSports);
-    setCurrentSchoolTypes(finalSchoolTypes || []);
+    setCurrentSports(sports);
+    setCurrentSchoolTypes(schoolTypes || []);
 
     try {
       // Stage 1: Generate isochrone
@@ -195,10 +171,10 @@ export default function Home() {
         },
         body: JSON.stringify({
           origin: searchOrigin,
-          sports: finalSports,
+          sports,
           driveTimeMinutes: driveTime,
           isochroneGeoJSON: isochroneData, // Pass the fetched isochrone for polygon filtering
-          schoolTypes: finalSchoolTypes || [],
+          schoolTypes: schoolTypes || [],
         }),
       });
 
@@ -424,94 +400,6 @@ export default function Home() {
         />
       </div>
 
-      {/* LEFT SIDEBAR - Pergamum style with luxury colors (desktop only) */}
-      <div className="hidden lg:block absolute left-6 top-32 bottom-6 z-30 w-64 pointer-events-none">
-        <div className="h-full overflow-y-auto pointer-events-auto space-y-4">
-          {/* Entity Type Categories */}
-          <div className="card-luxury rounded-lg p-4">
-            <h3 className="text-xs font-light text-label text-tertiary uppercase tracking-wider mb-3">
-              Entity Type
-            </h3>
-            <div className="space-y-2">
-              <button
-                onClick={() => toggleEntityFilter('club')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
-                  ${entityFilters.includes('club')
-                    ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-500/50 text-amber-300'
-                    : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
-                  }`}
-              >
-                <span className="text-lg">🏐</span>
-                <span>Clubs</span>
-                {entityFilters.includes('club') && <span className="ml-auto text-amber-400">✓</span>}
-              </button>
-              
-              <button
-                onClick={() => toggleEntityFilter('public')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
-                  ${entityFilters.includes('public')
-                    ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 border border-emerald-500/50 text-emerald-300'
-                    : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
-                  }`}
-              >
-                <span className="text-lg">🏫</span>
-                <span>Public Schools</span>
-                {entityFilters.includes('public') && <span className="ml-auto text-emerald-400">✓</span>}
-              </button>
-              
-              <button
-                onClick={() => toggleEntityFilter('private')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
-                  ${entityFilters.includes('private')
-                    ? 'bg-gradient-to-r from-violet-500/20 to-violet-600/20 border border-violet-500/50 text-violet-300'
-                    : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
-                  }`}
-              >
-                <span className="text-lg">🎓</span>
-                <span>Private Schools</span>
-                {entityFilters.includes('private') && <span className="ml-auto text-violet-400">✓</span>}
-              </button>
-              
-              <button
-                onClick={() => toggleEntityFilter('college')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
-                  ${entityFilters.includes('college')
-                    ? 'bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-500/50 text-blue-300'
-                    : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
-                  }`}
-              >
-                <span className="text-lg">🏛️</span>
-                <span>Colleges</span>
-                {entityFilters.includes('college') && <span className="ml-auto text-blue-400">✓</span>}
-              </button>
-            </div>
-          </div>
-          
-          {/* Sports Categories */}
-          <div className="card-luxury rounded-lg p-4">
-            <h3 className="text-xs font-light text-label text-tertiary uppercase tracking-wider mb-3">
-              Sports
-            </h3>
-            <div className="space-y-2">
-              {['volleyball', 'soccer', 'basketball', 'baseball', 'football'].map(sport => (
-                <button
-                  key={sport}
-                  onClick={() => toggleSportFilter(sport)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
-                    ${sportFilters.includes(sport)
-                      ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-500/50 text-amber-300'
-                      : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
-                    }`}
-                >
-                  <span className="capitalize">{sport}</span>
-                  {sportFilters.includes(sport) && <span className="ml-auto text-amber-400">✓</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* ANALYZING OVERLAY — shows when searching */}
       <AnalyzingOverlay 
         analysisStage={analysisStage}
@@ -671,7 +559,7 @@ export default function Home() {
       <UsageDisplay />
 
       {/* LEFT STATS CARDS — luxury overlay, floating (visible on desktop ≥ 1024px and tablet 768-1023px) */}
-      <div className="hidden lg:block absolute left-5 top-[600px] z-20 space-y-3 pointer-events-none">
+      <div className="hidden lg:block absolute left-5 top-44 z-20 space-y-3 pointer-events-none">
         <div className="pointer-events-auto">
           <div className="card-luxury rounded-lg px-5 py-4">
             <div className="text-2xl font-light text-numeric text-primary">{totalEntities}</div>
