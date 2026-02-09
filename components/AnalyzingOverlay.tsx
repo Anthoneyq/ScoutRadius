@@ -40,6 +40,7 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
 
   // Animate progress bar smoothly
   useEffect(() => {
+    // Reset progress when stage changes
     const currentIndex = STAGE_ORDER.indexOf(analysisStage);
     const totalStages = STAGE_ORDER.length - 2; // Exclude idle and complete
     
@@ -52,9 +53,12 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
     const startTime = Date.now();
     const startProgress = progressRef.current;
 
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
+    let isCancelled = false;
 
     const animate = () => {
+      if (isCancelled) return;
+      
       const elapsed = Date.now() - startTime;
       const progressRatio = Math.min(elapsed / duration, 1);
       
@@ -65,7 +69,7 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
       progressRef.current = currentProgress;
       setProgress(currentProgress);
 
-      if (progressRatio < 1) {
+      if (progressRatio < 1 && !isCancelled) {
         animationFrameId = requestAnimationFrame(animate);
       }
     };
@@ -73,7 +77,8 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
     animationFrameId = requestAnimationFrame(animate);
     
     return () => {
-      if (animationFrameId) {
+      isCancelled = true;
+      if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
       }
     };
