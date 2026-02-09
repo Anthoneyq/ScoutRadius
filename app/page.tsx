@@ -425,7 +425,7 @@ export default function Home() {
       </div>
 
       {/* LEFT SIDEBAR - Pergamum style with luxury colors (desktop only) */}
-      <div className="hidden lg:block absolute left-6 top-32 bottom-6 z-20 w-64 pointer-events-none">
+      <div className="hidden lg:block absolute left-6 top-32 bottom-6 z-30 w-64 pointer-events-none">
         <div className="h-full overflow-y-auto pointer-events-auto space-y-4">
           {/* Entity Type Categories */}
           <div className="card-luxury rounded-lg p-4">
@@ -671,7 +671,7 @@ export default function Home() {
       <UsageDisplay />
 
       {/* LEFT STATS CARDS — luxury overlay, floating (visible on desktop ≥ 1024px and tablet 768-1023px) */}
-      <div className="hidden lg:block absolute left-5 top-44 z-20 space-y-3 pointer-events-none">
+      <div className="hidden lg:block absolute left-5 top-[600px] z-20 space-y-3 pointer-events-none">
         <div className="pointer-events-auto">
           <div className="card-luxury rounded-lg px-5 py-4">
             <div className="text-2xl font-light text-numeric text-primary">{totalEntities}</div>
