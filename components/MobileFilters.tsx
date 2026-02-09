@@ -177,7 +177,7 @@ export default function MobileFilters({
           value={locationInput}
           onChange={(e) => onLocationInputChange(e.target.value)}
           placeholder="Address or coordinates"
-          className="w-full px-4 py-3 bg-[#0f172a]/50 border border-[#334155]/30 rounded-md text-primary placeholder:text-tertiary focus:ring-1 focus:ring-[#fbbf24]/20 focus:border-[#fbbf24]/30 text-base font-light transition-luxury backdrop-blur-sm"
+          className="w-full px-4 py-3.5 bg-[#0f172a]/50 border border-[#334155]/30 rounded-lg text-primary placeholder:text-tertiary focus:ring-2 focus:ring-[#fbbf24]/30 focus:border-[#fbbf24]/30 text-base font-light transition-luxury backdrop-blur-sm min-h-[48px]"
           style={{ fontSize: '16px' }}
           disabled={isLoading}
           onKeyDown={(e) => {

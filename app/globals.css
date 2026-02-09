@@ -130,6 +130,14 @@ h1, h2, h3, h4, h5, h6 {
     transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   
+  .transition-luxury-fast {
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-luxury-slow {
+    transition: all 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
   /* Opacity changes over color shifts */
   .hover-luxury {
     transition: opacity 300ms ease, transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -137,5 +145,15 @@ h1, h2, h3, h4, h5, h6 {
   
   .hover-luxury:hover {
     opacity: 0.9;
+  }
+  
+  /* Luxury pulse animation for loading states */
+  @keyframes luxury-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+  
+  .analyzing-progress-bar {
+    animation: luxury-pulse 2s ease-in-out infinite;
   }
 }

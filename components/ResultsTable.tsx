@@ -212,7 +212,7 @@ export default function ResultsTable(props: ResultsTableProps) {
           </div>
           <div className="card-luxury rounded-md px-3 py-2">
             <div className="text-lg font-light text-numeric accent-emerald">{highConfidenceClubs}</div>
-            <div className="text-[9px] text-label text-tertiary mt-0.5">CLUBS</div>
+            <div className="text-[9px] text-label text-tertiary mt-0.5">ENTITIES</div>
           </div>
           <div className="card-luxury rounded-md px-3 py-2">
             <div className="text-lg font-light text-numeric accent-gold">{avgDriveTime || '—'}</div>
@@ -250,8 +250,40 @@ export default function ResultsTable(props: ResultsTableProps) {
 
       {/* Section 2: Ranked Results - Intelligence Dossier Style */}
       <div ref={scrollContainerRef} className="flex-1 overflow-auto">
-        {filteredAndSorted.length === 0 ? (
-          /* Section 3: Empty State - Never Blank */
+        {filteredAndSorted.length === 0 && places.length === 0 ? (
+          /* Initial Empty State - No search yet */
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="text-center max-w-sm">
+              <div className="text-5xl mb-4 opacity-40">🔍</div>
+              <h3 className="text-sm font-light text-secondary mb-2">
+                No Results Yet
+              </h3>
+              <p className="text-xs text-tertiary font-light leading-relaxed">
+                Select your location, drive time, and sport to begin searching for clubs and schools in your area.
+              </p>
+            </div>
+          </div>
+        ) : filteredAndSorted.length === 0 && places.length > 0 ? (
+          /* Filtered Empty State - Results exist but filtered out */
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="text-center max-w-sm">
+              <div className="text-5xl mb-4 opacity-40">🎯</div>
+              <h3 className="text-sm font-light text-secondary mb-2">
+                No Matches Found
+              </h3>
+              <p className="text-xs text-tertiary font-light leading-relaxed mb-4">
+                Try adjusting your filters:
+              </p>
+              <ul className="text-xs text-tertiary font-light space-y-2 text-left max-w-xs mx-auto">
+                <li>• Increase drive time range</li>
+                <li>• Select different sports</li>
+                <li>• Clear school type filters</li>
+                <li>• Try a different age group</li>
+              </ul>
+            </div>
+          </div>
+        ) : filteredAndSorted.length === 0 ? (
+          /* Legacy Empty State - Fallback */
           <div className="px-5 py-10">
             <div className="card-luxury rounded-lg px-5 py-8 text-center">
               {schoolTypes.includes('public') && selectedSports.length > 0 ? (
@@ -420,12 +452,31 @@ export default function ResultsTable(props: ResultsTableProps) {
                         </div>
                         
                         {/* Drive time - right aligned, emphasized */}
-                        {place.driveTime !== null && place.driveTime !== undefined && (
+                        {place.driveTime !== null && place.driveTime !== undefined ? (
                           <div className="flex-shrink-0 text-right">
-                            <div className="text-lg font-light text-numeric accent-gold">{place.driveTime}</div>
+                            <div className="flex items-center justify-end gap-1">
+                              <svg className="w-3.5 h-3.5 opacity-70 text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              <div className="text-lg font-light text-numeric accent-gold">{place.driveTime}</div>
+                            </div>
                             <div className="text-[10px] text-label text-tertiary">MIN</div>
                           </div>
-                        )}
+                        ) : place.distance !== null && place.distance !== undefined ? (
+                          <div className="flex-shrink-0 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <svg className="w-3.5 h-3.5 opacity-70 text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <div className="text-lg font-light text-numeric accent-gold">~{Math.round(place.distance * 1.2)}</div>
+                            </div>
+                            <div className="text-[10px] text-label text-tertiary flex items-center gap-1">
+                              <span>MIN</span>
+                              <span className="text-[9px] opacity-60" title="Estimated">~</span>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                       
                       {/* Age badges */}

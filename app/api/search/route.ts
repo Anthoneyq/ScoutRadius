@@ -142,7 +142,8 @@ function filterResultsStrict(
       const selectedSport = filters.sports[0].toLowerCase();
       if (!entity.sports || !entity.sports.includes(selectedSport)) return false;
       const confidence = entity.sportsConfidence?.[selectedSport];
-      if (confidence !== 1.0) return false;
+      // Accept 70%+ confidence instead of requiring 100% (more forgiving)
+      if (confidence === undefined || confidence < 0.7) return false;
     }
     
     return true;
@@ -173,14 +174,15 @@ function filterResultsStrict(
     
     if (hasOnlyEntityFilters) {
       // Just public/private filter, no school level filter
-      // CONDITIONAL SPORT FILTER (strict) - applies after entity type filter
+      // CONDITIONAL SPORT FILTER (relaxed) - applies after entity type filter
       if (filters.sports && filters.sports.length > 0) {
         const selectedSport = filters.sports[0].toLowerCase();
         if (!entity.sports || entity.sports.length === 0) return false;
         const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
         if (!hasSport) return false;
         const confidence = entity.sportsConfidence?.[selectedSport];
-        if (confidence !== 1.0) return false;
+        // Accept 70%+ confidence instead of requiring 100% (more forgiving)
+        if (confidence === undefined || confidence < 0.7) return false;
       }
       return true;
     }
@@ -196,14 +198,15 @@ function filterResultsStrict(
       if (!matchesLevel) return false;
     }
     
-    // CONDITIONAL SPORT FILTER (strict) - applies after entity type filter
+    // CONDITIONAL SPORT FILTER (relaxed) - applies after entity type filter
     if (filters.sports && filters.sports.length > 0) {
       const selectedSport = filters.sports[0].toLowerCase();
       if (!entity.sports || entity.sports.length === 0) return false;
       const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
       if (!hasSport) return false;
       const confidence = entity.sportsConfidence?.[selectedSport];
-      if (confidence !== 1.0) return false;
+      // Accept 70%+ confidence instead of requiring 100% (more forgiving)
+      if (confidence === undefined || confidence < 0.7) return false;
     }
     
     return true;
@@ -215,7 +218,8 @@ function filterResultsStrict(
     const selectedSport = filters.sports[0].toLowerCase();
     if (!entity.sports || !entity.sports.includes(selectedSport)) return false;
     const confidence = entity.sportsConfidence?.[selectedSport];
-    if (confidence !== 1.0) return false;
+    // Accept 70%+ confidence instead of requiring 100% (more forgiving)
+    if (confidence === undefined || confidence < 0.7) return false;
   }
   
   return true;
@@ -559,6 +563,13 @@ export async function POST(request: NextRequest) {
               } else if (shouldRunAI && !canUseAIFeature) {
                 // Log that AI was skipped due to paywall
                 console.debug(`[AI] Skipped classification for "${place.name}" - usage limit reached`);
+                // Add flag to indicate AI was skipped (for UX feedback)
+                if (!place.confidenceSignals) {
+                  place.confidenceSignals = [];
+                }
+                if (!place.confidenceSignals.includes('ai_skipped_paywall')) {
+                  place.confidenceSignals.push('ai_skipped_paywall');
+                }
               }
               
               // Set isClub flag based on final score
@@ -954,7 +965,10 @@ export async function POST(request: NextRequest) {
               (initialScore >= 40 && initialScore <= 70) || 
               (!place.osmConfirmed && initialScore >= 20);
             
-            if (shouldRunAI && rawPlacesBeforeFiltering.length < 30) {
+            // Check paywall before running AI
+            const canUseAIFeature = canUseAI(userUsage);
+            
+            if (shouldRunAI && rawPlacesBeforeFiltering.length < 30 && canUseAIFeature) {
               try {
                 const aiResult = await classifyPlaceWithAI({
                   name: place.name,
@@ -971,6 +985,16 @@ export async function POST(request: NextRequest) {
                 }
               } catch (aiError) {
                 console.debug(`[AI] Classification failed for "${place.name}":`, aiError);
+              }
+            } else if (shouldRunAI && !canUseAIFeature) {
+              // Log that AI was skipped due to paywall
+              console.debug(`[AI] Skipped classification for "${place.name}" - usage limit reached`);
+              // Add flag to indicate AI was skipped (for UX feedback)
+              if (!place.confidenceSignals) {
+                place.confidenceSignals = [];
+              }
+              if (!place.confidenceSignals.includes('ai_skipped_paywall')) {
+                place.confidenceSignals.push('ai_skipped_paywall');
               }
             }
             
@@ -1192,6 +1216,11 @@ export async function POST(request: NextRequest) {
       console.warn(`[Search API] Debug info: totalResultsFound=${totalResultsFound}, radiusMeters=${radiusMeters}, keywords used=${sports.flatMap(s => SPORT_KEYWORDS[s.toLowerCase()] || [`${s} club`]).join(', ')}`);
     }
 
+    // Count places where AI was skipped due to paywall
+    const aiSkippedCount = filteredPlaces.filter(p => 
+      p.confidenceSignals?.includes('ai_skipped_paywall')
+    ).length;
+
     return NextResponse.json({ 
       places: filteredPlaces,
       debug: {
@@ -1206,6 +1235,7 @@ export async function POST(request: NextRequest) {
         // External intelligence signals
         osmConfirmedCount,
         aiClassifiedCount,
+        aiSkippedCount, // Places where AI was skipped due to paywall
         avgConfidence: Math.round(avgConfidenceScore * 10) / 10,
         // Filter info
         schoolTypesFilter: schoolTypes.length > 0 ? schoolTypes : null,

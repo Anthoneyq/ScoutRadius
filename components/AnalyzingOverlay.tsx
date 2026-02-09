@@ -1,9 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+type AnalysisStage = 
+  | "idle" 
+  | "isochrone" 
+  | "entityFetch" 
+  | "ranking" 
+  | "complete";
 
 interface AnalyzingOverlayProps {
-  isLoading: boolean;
+  analysisStage: AnalysisStage;
   searchParams?: {
     sports?: string[];
     schoolTypes?: string[];
@@ -11,60 +16,21 @@ interface AnalyzingOverlayProps {
   };
 }
 
-export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingOverlayProps) {
-  const [progress, setProgress] = useState({
-    area: 0,
-    search: 0,
-    analysis: 0,
-  });
+const STAGE_ORDER: AnalysisStage[] = [
+  "idle",
+  "isochrone",
+  "entityFetch",
+  "ranking",
+  "complete",
+];
 
+export default function AnalyzingOverlay({ analysisStage, searchParams }: AnalyzingOverlayProps) {
   const sports = searchParams?.sports || [];
   const schoolTypes = searchParams?.schoolTypes || [];
   const location = searchParams?.location || '';
 
-  // Timer-based progress animation - gradual but faster than original
-  useEffect(() => {
-    if (!isLoading) {
-      // Reset progress when loading stops
-      setProgress({ area: 0, search: 0, analysis: 0 });
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        // Area generation: steady progress with slight randomness (faster than original)
-        const areaIncrement = 0.6 + Math.random() * 0.2;
-        const newArea = Math.min(prev.area + areaIncrement, 100);
-
-        // Search: starts after area reaches 30%, steady progress
-        const searchIncrement = prev.area > 30 
-          ? 0.7 + Math.random() * 0.3 
-          : 0;
-        const newSearch = Math.min(prev.search + searchIncrement, 100);
-
-        // Analysis: starts after search reaches 60%, steady progress
-        const analysisIncrement = prev.search > 60
-          ? 0.5 + Math.random() * 0.2
-          : 0;
-        const newAnalysis = Math.min(prev.analysis + analysisIncrement, 100);
-
-        return {
-          area: newArea,
-          search: newSearch,
-          analysis: newAnalysis,
-        };
-      });
-    }, 100); // Update every 100ms (faster than original 120ms, but allows gradual progress)
-
-    return () => clearInterval(interval);
-  }, [isLoading]);
-
-  // Only show overlay when actively loading or when there's progress to display
-  const hasProgress = progress.area > 0 || progress.search > 0 || progress.analysis > 0;
-  const allComplete = progress.area >= 100 && progress.search >= 100 && progress.analysis >= 100;
-  
-  // Hide if not loading and either no progress has started or all bars are complete
-  if (!isLoading && (!hasProgress || allComplete)) {
+  // Hide overlay when idle or complete
+  if (analysisStage === "idle" || analysisStage === "complete") {
     return null;
   }
 
@@ -93,6 +59,20 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
   const hasSchools = schoolTypes.length > 0;
   const isSearchingAll = !hasSports && !hasSchools; // Default search (all sports)
 
+  // Helper function to determine bar state
+  const getBarState = (stage: AnalysisStage) => {
+    const currentIndex = STAGE_ORDER.indexOf(analysisStage);
+    const stageIndex = STAGE_ORDER.indexOf(stage);
+    
+    if (stageIndex < currentIndex) {
+      return 'complete'; // Stage is complete
+    } else if (stageIndex === currentIndex) {
+      return 'active'; // Stage is currently active
+    } else {
+      return 'inactive'; // Stage hasn't started yet
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-luxury-dark/95 backdrop-blur-md flex items-center justify-center">
       <div className="w-full max-w-2xl px-6 py-8">
@@ -112,40 +92,82 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
 
         {/* Analysis Steps */}
         <div className="space-y-4 mb-8">
-          {/* Step 1: Generating Drive-Time Area */}
+          {/* Step 1: Generating Drive-Time Area (isochrone) */}
           <div className="card-luxury rounded-lg px-5 py-4">
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-[#fbbf24] animate-pulse"></div>
+              <div className={`w-2 h-2 rounded-full ${
+                getBarState("isochrone") === 'active' 
+                  ? 'bg-[#fbbf24] animate-pulse' 
+                  : getBarState("isochrone") === 'complete'
+                    ? 'bg-[#fbbf24]'
+                    : 'bg-[#334155]/50'
+              }`}></div>
               <div className="flex-1">
                 <div className="text-sm font-light text-label text-secondary mb-1">Mapping reachable training area</div>
                 <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-[#fbbf24]/40 rounded-full transition-all duration-[600ms] ease-out"
-                    style={{ width: `${progress.area}%` }}
+                    className={`h-full rounded-full transition-all duration-[600ms] ease-out ${
+                      getBarState("isochrone") === 'active'
+                        ? 'bg-[#fbbf24]/40 animate-pulse'
+                        : getBarState("isochrone") === 'complete'
+                          ? 'bg-[#fbbf24]/60'
+                          : 'bg-transparent'
+                    }`}
+                    style={{ 
+                      width: getBarState("isochrone") === 'complete' 
+                        ? '100%' 
+                        : getBarState("isochrone") === 'active'
+                          ? '100%' // Animated indeterminate
+                          : '0%'
+                    }}
                   ></div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Step 2: Searching Sports Clubs */}
-          {(hasSports || isSearchingAll) && (
+          {/* Step 2: Searching & Validating (entityFetch) - covers all server-side work */}
+          {(hasSports || isSearchingAll || hasSchools) && (
             <div className="card-luxury rounded-lg px-5 py-4">
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></div>
+                <div className={`w-2 h-2 rounded-full ${
+                  getBarState("entityFetch") === 'active' 
+                    ? 'bg-[#10b981] animate-pulse' 
+                    : getBarState("entityFetch") === 'complete'
+                      ? 'bg-[#10b981]'
+                      : 'bg-[#334155]/50'
+                }`}></div>
                 <div className="flex-1">
                   <div className="text-sm font-light text-label text-secondary mb-1">
                     {isSearchingAll 
                       ? 'Scanning relevant programs'
-                      : sports.length === 1 
-                        ? `Scanning ${formatSportName(sports[0])} programs`
-                        : `Scanning ${sports.length} sports: ${sports.slice(0, 2).map(formatSportName).join(', ')}${sports.length > 2 ? '...' : ''}`
+                      : hasSports && hasSchools
+                        ? `Scanning ${sports.length} sports & validating schools`
+                        : hasSports
+                          ? sports.length === 1 
+                            ? `Scanning ${formatSportName(sports[0])} programs`
+                            : `Scanning ${sports.length} sports: ${sports.slice(0, 2).map(formatSportName).join(', ')}${sports.length > 2 ? '...' : ''}`
+                          : hasSchools
+                            ? `Validating ${schoolTypes.length === 1 ? formatSchoolType(schoolTypes[0]) : `${schoolTypes.length} school types`}`
+                            : 'Scanning relevant programs'
                     }
                   </div>
                   <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-[#10b981]/40 rounded-full transition-all duration-[600ms] ease-out"
-                      style={{ width: `${progress.search}%` }}
+                      className={`h-full rounded-full transition-all duration-[600ms] ease-out ${
+                        getBarState("entityFetch") === 'active'
+                          ? 'bg-[#10b981]/40 animate-pulse'
+                          : getBarState("entityFetch") === 'complete'
+                            ? 'bg-[#10b981]/60'
+                            : 'bg-transparent'
+                      }`}
+                      style={{ 
+                        width: getBarState("entityFetch") === 'complete' 
+                          ? '100%' 
+                          : getBarState("entityFetch") === 'active'
+                            ? '100%' // Animated indeterminate
+                            : '0%'
+                      }}
                     ></div>
                   </div>
                 </div>
@@ -153,44 +175,41 @@ export default function AnalyzingOverlay({ isLoading, searchParams }: AnalyzingO
             </div>
           )}
 
-          {/* Step 3: Searching Schools */}
-          {hasSchools && (
+          {/* Step 3: Ranking Results (ranking) - only shown when entityFetch is complete */}
+          {getBarState("entityFetch") === 'complete' && (
             <div className="card-luxury rounded-lg px-5 py-4">
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-[#3b82f6] animate-pulse"></div>
+                <div className={`w-2 h-2 rounded-full ${
+                  getBarState("ranking") === 'active' 
+                    ? 'bg-[#fbbf24] animate-pulse' 
+                    : getBarState("ranking") === 'complete'
+                      ? 'bg-[#fbbf24]'
+                      : 'bg-[#334155]/50'
+                }`}></div>
                 <div className="flex-1">
-                  <div className="text-sm font-light text-label text-secondary mb-1">
-                    {schoolTypes.length === 1 
-                      ? `Validating ${formatSchoolType(schoolTypes[0])}`
-                      : `Validating ${schoolTypes.length} school types`
-                    }
-                  </div>
+                  <div className="text-sm font-light text-label text-secondary mb-1">Ranking best opportunities</div>
                   <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-[#3b82f6]/40 rounded-full transition-all duration-[600ms] ease-out"
-                      style={{ width: `${progress.search}%` }}
+                      className={`h-full rounded-full transition-all duration-[600ms] ease-out ${
+                        getBarState("ranking") === 'active'
+                          ? 'bg-[#fbbf24]/40 animate-pulse'
+                          : getBarState("ranking") === 'complete'
+                            ? 'bg-[#fbbf24]/60'
+                            : 'bg-transparent'
+                      }`}
+                      style={{ 
+                        width: getBarState("ranking") === 'complete' 
+                          ? '100%' 
+                          : getBarState("ranking") === 'active'
+                            ? '100%' // Animated indeterminate
+                            : '0%'
+                      }}
                     ></div>
                   </div>
                 </div>
               </div>
             </div>
           )}
-
-          {/* Step 4: Analyzing Results */}
-          <div className="card-luxury rounded-lg px-5 py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-[#fbbf24] animate-pulse"></div>
-              <div className="flex-1">
-                <div className="text-sm font-light text-label text-secondary mb-1">Ranking best opportunities</div>
-                <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[#fbbf24]/40 rounded-full transition-all duration-[600ms] ease-out"
-                    style={{ width: `${progress.analysis}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Results Loading Message */}
