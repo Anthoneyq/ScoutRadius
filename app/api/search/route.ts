@@ -107,183 +107,122 @@ const EXCLUDED_KEYWORDS = [
 ];
 
 /**
- * MVP: STRICT FILTERING LOGIC (Authoritative)
- * Entity Type filters are HARD GATES
- * - School filters exclude all clubs
- * - Club filter excludes all schools
- * - Sport filters apply after entity type filtering (strict, requires 100% confidence)
+ * FIXED FILTERING LOGIC for Coaching Recruitment
+ * 
+ * Rules:
+ * 1. NO FILTERS SELECTED = Show ALL legitimate sports venues (exclude retail)
+ * 2. SPORT FILTER ONLY = Show all entity types that offer that sport
+ * 3. ENTITY FILTER ONLY = Show all schools/clubs of that type (any sport)
+ * 4. BOTH FILTERS = Show only entities matching BOTH criteria (intersection)
  */
 function filterResultsStrict(
   entity: Place,
   filters: {
-    schoolTypes?: string[]; // MVP: Can include 'club', 'public', 'private', or school levels
+    schoolTypes?: string[]; // Can include 'club', 'public', 'private', or school levels
     sports?: string[];
   }
 ): boolean {
-  // MVP: Entity type must be explicitly set (no ambiguous results)
+  // RULE 0: Entity type must be explicitly set
   if (!entity.entityType) {
-    return false; // Exclude entities without explicit type
+    return false;
   }
   
-  // MVP RULE 1: Club filter excludes schools
-  if (filters.schoolTypes && filters.schoolTypes.includes('club')) {
-    // If filtering for clubs, exclude all schools
-    if (entity.entityType === 'Public School' || entity.entityType === 'Private School') {
-      return false;
-    }
-    
-    // Must be a club
-    if (entity.entityType !== 'Club') {
-      return false;
-    }
-    
-    // Sport filter applies to clubs too (if specified)
-    if (filters.sports && filters.sports.length > 0) {
-      const selectedSport = filters.sports[0].toLowerCase();
-      if (!entity.sports || !entity.sports.includes(selectedSport)) return false;
-      const confidence = entity.sportsConfidence?.[selectedSport];
-      // Accept 70%+ confidence instead of requiring 100% (more forgiving)
-      if (confidence === undefined || confidence < 0.7) return false;
-    }
-    
+  // RULE 1: NO FILTERS = SHOW EVERYTHING (default behavior)
+  const hasEntityFilter = filters.schoolTypes && filters.schoolTypes.length > 0;
+  const hasSportFilter = filters.sports && filters.sports.length > 0;
+  
+  if (!hasEntityFilter && !hasSportFilter) {
+    // No filters selected - show all legitimate sports venues
     return true;
   }
   
-  // MVP RULE 2: School filters exclude clubs
-  if (filters.schoolTypes && filters.schoolTypes.length > 0) {
-    // CRITICAL: If filtering for schools, exclude all clubs
-    if (entity.entityType === 'Club') {
-      return false;
-    }
+  // RULE 2: ENTITY FILTERS (clubs, public, private, school levels)
+  let passesEntityFilter = true;
+  
+  if (hasEntityFilter) {
+    passesEntityFilter = false; // Start false, must match at least one
     
-    // Must be a school entity
-    if (entity.entityType !== 'Public School' && entity.entityType !== 'Private School') {
-      return false;
-    }
-    
-    // Check specific school type filters
-    const hasPublicFilter = filters.schoolTypes.includes('public');
-    const hasPrivateFilter = filters.schoolTypes.includes('private');
-    const hasClubFilter = filters.schoolTypes.includes('club');
-    
-    // If club filter is selected, exclude schools (handled by RULE 1 above)
-    if (hasClubFilter) {
-      return false; // Shouldn't reach here due to RULE 1, but safety check
-    }
-    
-    // CRITICAL FIX: When user selects school filters, show ALL matching schools
-    // Don't require exact match on school level unless ONLY level filters are specified
-    
-    // If public filter is selected, show ALL public schools
-    if (hasPublicFilter && entity.entityType === 'Public School') {
-      // Check level filters if specified (but don't block if no match)
-      const schoolLevelFilters = filters.schoolTypes.filter(id => 
-        ['elementary', 'middle', 'juniorHigh', 'highSchool'].includes(id)
-      );
-      
-      if (schoolLevelFilters.length > 0) {
-        // Level filters specified - prefer matches but don't block
-        if (entity.schoolTypes && entity.schoolTypes.length > 0) {
-          const matchesLevel = entity.schoolTypes.some(type => schoolLevelFilters.includes(type));
-          // Even if doesn't match level, still allow (user selected "public" - show all public schools)
-        }
+    // Check for 'club' filter
+    if (filters.schoolTypes!.includes('club')) {
+      if (entity.entityType === 'Club') {
+        passesEntityFilter = true;
       }
-      
-      // CRITICAL: When school type is primary filter, sport filter is OPTIONAL
-      // Don't block schools if sport data is missing or incomplete
-      // Schools might have sports even if not detected in name
-      if (filters.sports && filters.sports.length > 0) {
-        const selectedSport = filters.sports[0].toLowerCase();
-        if (entity.sports && entity.sports.length > 0) {
-          const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
-          if (hasSport) {
-            const confidence = entity.sportsConfidence?.[selectedSport];
-            // Only filter out if confidence is explicitly very low (< 0.3)
-            // This allows schools with 0.5 confidence (default for schools without sport in name)
-            if (confidence !== undefined && confidence < 0.3) return false;
-          }
-          // If school doesn't have this sport in list, still allow through
-          // Sport data might be incomplete - don't block schools
-        }
-        // If school has no sports data, allow through (school might have sport)
-      }
-      
-      return true; // Public school matches public filter
     }
     
-    // If private filter is selected, show ALL private schools
-    if (hasPrivateFilter && entity.entityType === 'Private School') {
-      const schoolLevelFilters = filters.schoolTypes.filter(id => 
-        ['elementary', 'middle', 'juniorHigh', 'highSchool'].includes(id)
-      );
-      
-      if (schoolLevelFilters.length > 0) {
-        if (entity.schoolTypes && entity.schoolTypes.length > 0) {
-          const matchesLevel = entity.schoolTypes.some(type => schoolLevelFilters.includes(type));
-          // Allow through even if level doesn't match (user selected "private" - show all private)
-        }
+    // Check for 'public' filter
+    if (filters.schoolTypes!.includes('public')) {
+      if (entity.entityType === 'Public School') {
+        passesEntityFilter = true;
       }
-      
-      // CRITICAL: When school type is primary filter, sport filter is OPTIONAL
-      if (filters.sports && filters.sports.length > 0) {
-        const selectedSport = filters.sports[0].toLowerCase();
-        if (entity.sports && entity.sports.length > 0) {
-          const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
-          if (hasSport) {
-            const confidence = entity.sportsConfidence?.[selectedSport];
-            // Only filter out if confidence is explicitly very low (< 0.3)
-            if (confidence !== undefined && confidence < 0.3) return false;
-          }
-        }
-      }
-      
-      return true; // Private school matches private filter
     }
     
-    // If only school level filters (no public/private), show schools matching level
-    const schoolLevelFilters = filters.schoolTypes.filter(id => 
+    // Check for 'private' filter
+    if (filters.schoolTypes!.includes('private')) {
+      if (entity.entityType === 'Private School') {
+        passesEntityFilter = true;
+      }
+    }
+    
+    // Check for 'college' filter
+    if (filters.schoolTypes!.includes('college')) {
+      if (entity.entityType === 'College') {
+        passesEntityFilter = true;
+      }
+    }
+    
+    // Check for school level filters (elementary, middle, juniorHigh, highSchool)
+    const schoolLevelFilters = filters.schoolTypes!.filter(id => 
       ['elementary', 'middle', 'juniorHigh', 'highSchool'].includes(id)
     );
     
-    if (schoolLevelFilters.length > 0 && !hasPublicFilter && !hasPrivateFilter) {
-      // Only level filters, no public/private filter
-      if (entity.schoolTypes && entity.schoolTypes.length > 0) {
-        const matchesLevel = entity.schoolTypes.some(type => schoolLevelFilters.includes(type));
-        if (matchesLevel) {
-          // Matches level - check sport filter if specified
-          if (filters.sports && filters.sports.length > 0) {
-            const selectedSport = filters.sports[0].toLowerCase();
-            if (entity.sports && entity.sports.length > 0) {
-              const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
-              if (hasSport) {
-                const confidence = entity.sportsConfidence?.[selectedSport];
-                if (confidence !== undefined && confidence < 0.7) return false;
-              }
-            }
-          }
-          return true;
+    if (schoolLevelFilters.length > 0) {
+      // Must be a school AND have matching level
+      const isSchool = entity.entityType === 'Public School' || entity.entityType === 'Private School';
+      if (isSchool && entity.schoolTypes) {
+        const hasMatchingLevel = entity.schoolTypes.some(type => 
+          schoolLevelFilters.includes(type)
+        );
+        if (hasMatchingLevel) {
+          passesEntityFilter = true;
         }
       }
-      // If no level detected, still allow through (be lenient)
-      return true;
     }
     
-    // If we reach here, user selected school filters but no match
-    // This shouldn't happen, but be lenient - if it's a school, allow it
-    return true;
+    // If entity filter active but didn't match anything, exclude
+    if (!passesEntityFilter) {
+      return false;
+    }
   }
   
-  // If no entity type filter, allow through (sport filters may still apply)
-  // Sport filter (if specified) still applies
-  if (filters.sports && filters.sports.length > 0) {
-    const selectedSport = filters.sports[0].toLowerCase();
-    if (!entity.sports || !entity.sports.includes(selectedSport)) return false;
-    const confidence = entity.sportsConfidence?.[selectedSport];
-    // Accept 70%+ confidence instead of requiring 100% (more forgiving)
-    if (confidence === undefined || confidence < 0.7) return false;
+  // RULE 3: SPORT FILTERS
+  let passesSportFilter = true;
+  
+  if (hasSportFilter) {
+    passesSportFilter = false; // Start false, must match at least one
+    
+    const selectedSport = filters.sports![0].toLowerCase();
+    
+    // Check if entity has this sport
+    if (entity.sports && entity.sports.length > 0) {
+      const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
+      
+      if (hasSport) {
+        // Check confidence - accept 70%+ OR if no confidence score assume valid
+        const confidence = entity.sportsConfidence?.[selectedSport];
+        if (confidence === undefined || confidence >= 0.7) {
+          passesSportFilter = true;
+        }
+      }
+    }
+    
+    // If sport filter active but didn't match, exclude
+    if (!passesSportFilter) {
+      return false;
+    }
   }
   
-  return true;
+  // RULE 4: BOTH FILTERS = Must pass both
+  return passesEntityFilter && passesSportFilter;
 }
 
 export async function POST(request: NextRequest) {
@@ -448,9 +387,55 @@ export async function POST(request: NextRequest) {
             try {
               const place = convertGooglePlace(googlePlace, sport);
               
-              // Detect if this is a school (even if found through sports search)
+              // Detect if this is a college/university (check before schools)
               const placeName = (place.name || '').toLowerCase();
               const placeTypes = googlePlace.types || [];
+              const isCollege = 
+                placeTypes.some((type: string) => 
+                  type.includes('university') || 
+                  type.includes('college')
+                ) ||
+                placeName.includes('university') ||
+                placeName.includes('college') ||
+                placeName.includes('community college') ||
+                (placeName.includes('university of') && !placeName.includes('high school'));
+              
+              if (isCollege) {
+                place.isSchool = true; // Colleges are educational institutions
+                place.entityType = 'College';
+                
+                // Sports detection for colleges (similar to schools)
+                if (sport) {
+                  const sportLower = sport.toLowerCase();
+                  const nameContainsSport = placeName.includes(sportLower);
+                  
+                  if (!place.sports) {
+                    place.sports = [];
+                  }
+                  if (!place.sportsConfidence) {
+                    place.sportsConfidence = {};
+                  }
+                  
+                  if (!place.sports.includes(sportLower)) {
+                    place.sports.push(sportLower);
+                  }
+                  // Colleges likely have sports programs - set confidence based on name match
+                  place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.7;
+                }
+                
+                // Calculate club confidence (colleges get higher base score)
+                const initialScore = getClubConfidence(place);
+                place.clubScore = initialScore + 15; // Boost for colleges
+                place.isClub = true; // Colleges are considered sports venues
+                
+                // Age groups - colleges typically serve college-age athletes
+                const ageGroups = getAgeGroupScores(place);
+                ageGroups.elite += 5; // Boost elite score for colleges
+                place.ageGroups = ageGroups;
+                place.primaryAgeGroup = getPrimaryAgeGroup(ageGroups);
+              }
+              
+              // Detect if this is a school (even if found through sports search)
               const isSchool = 
                 placeTypes.some((type: string) => 
                   type.includes('school') || 
@@ -463,7 +448,8 @@ export async function POST(request: NextRequest) {
                 placeName.includes('middle school') ||
                 placeName.includes('elementary');
               
-              if (isSchool) {
+              // Only process as school if not already detected as college
+              if (isSchool && !isCollege) {
                 place.isSchool = true;
                 
                 // Detect school types from name/types
@@ -506,14 +492,13 @@ export async function POST(request: NextRequest) {
                 
                 place.schoolTypes = detectedSchoolTypes.length > 0 ? detectedSchoolTypes : ['highSchool']; // Default to high school if unclear
                 
-                // MVP: Assign explicit entityType (hard-coded, not inferred)
-                // Determine if Public School or Private School
+                // ✅ FIX: Update entityType based on school detection
                 if (detectedSchoolTypes.includes('private')) {
                   place.entityType = 'Private School';
                 } else if (detectedSchoolTypes.includes('public')) {
                   place.entityType = 'Public School';
                 } else {
-                  // Default to Public School if unclear (most schools are public)
+                  // Default to public if school type unclear but is a school
                   place.entityType = 'Public School';
                 }
                 
@@ -636,6 +621,11 @@ export async function POST(request: NextRequest) {
               // Set isClub flag based on final score
               place.isClub = (place.clubScore ?? 0) >= 3;
               
+              // ✅ FIX: If not a school and has club indicators, mark as Club
+              if (!place.isSchool && (place.clubScore ?? 0) >= 3) {
+                place.entityType = 'Club';
+              }
+              
               // Calculate age group scores
               const ageGroups = getAgeGroupScores(place);
               place.ageGroups = ageGroups;
@@ -736,6 +726,7 @@ export async function POST(request: NextRequest) {
       const schoolTypeKeywords: Record<string, string[]> = {
         'private': ['private school', 'private academy', 'private high school', 'private elementary'],
         'public': ['public school', 'public high school', 'public middle school', 'public elementary'],
+        'college': ['college', 'university', 'community college'],
         'elementary': ['elementary school', 'primary school', 'grade school'],
         'middle': ['middle school', 'intermediate school'],
         'juniorHigh': ['junior high school', 'junior high'],
@@ -769,9 +760,104 @@ export async function POST(request: NextRequest) {
           // Process school results
           for (const googlePlace of results) {
             try {
-              // Check if place is a school by types or name
+              // Check if place is a college/university first
               const placeName = (googlePlace.displayName?.text || '').toLowerCase();
               const placeTypes = googlePlace.types || [];
+              const isCollege = 
+                placeTypes.some((type: string) => 
+                  type.includes('university') || 
+                  type.includes('college')
+                ) ||
+                placeName.includes('university') ||
+                placeName.includes('college') ||
+                placeName.includes('community college') ||
+                (placeName.includes('university of') && !placeName.includes('high school'));
+              
+              if (isCollege) {
+                // Process as college
+                const sportLabel = sports.length > 0 ? sports[0] : 'college';
+                const place = convertGooglePlace(googlePlace, sportLabel);
+                place.isSchool = true;
+                place.entityType = 'College';
+                
+                // Sports detection for colleges
+                if (sports && sports.length > 0) {
+                  if (!place.sports) {
+                    place.sports = [];
+                  }
+                  if (!place.sportsConfidence) {
+                    place.sportsConfidence = {};
+                  }
+                  
+                  const placeNameLower = place.name.toLowerCase();
+                  for (const sport of sports) {
+                    const sportLower = sport.toLowerCase();
+                    const nameContainsSport = placeNameLower.includes(sportLower);
+                    
+                    if (!place.sports.includes(sportLower)) {
+                      place.sports.push(sportLower);
+                    }
+                    place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.7;
+                  }
+                }
+                
+                // Calculate club confidence
+                const initialScore = getClubConfidence(place);
+                place.clubScore = initialScore + 15;
+                place.isClub = true;
+                
+                const ageGroups = getAgeGroupScores(place);
+                ageGroups.elite += 5;
+                place.ageGroups = ageGroups;
+                place.primaryAgeGroup = getPrimaryAgeGroup(ageGroups);
+                
+                // Filter by isochrone and calculate drive time (same as schools)
+                if (isRetailSportStore({
+                  name: place.name,
+                  displayName: googlePlace.displayName,
+                  website: place.website,
+                })) {
+                  retailExcludedCount++;
+                  continue;
+                }
+                
+                if (isochronePolygon) {
+                  const placePoint = point([place.location.lng, place.location.lat]);
+                  const isInside = booleanPointInPolygon(placePoint, isochronePolygon);
+                  if (!isInside) continue;
+                  totalResultsAfterPolygonFilter++;
+                }
+                
+                try {
+                  const directions = await getDirections(
+                    [origin.lng, origin.lat],
+                    [place.location.lng, place.location.lat],
+                    mapboxToken
+                  );
+
+                  if (directions.routes && directions.routes.length > 0) {
+                    const route = directions.routes[0];
+                    const calculatedDriveTimeMinutes = Math.round(route.duration / 60);
+                    const distanceMiles = metersToMiles(route.distance);
+
+                    if (calculatedDriveTimeMinutes <= driveTimeMinutes + 1) {
+                      place.driveTime = calculatedDriveTimeMinutes;
+                      place.distance = distanceMiles;
+                      allPlaces.push(place);
+                      totalResultsAfterDriveTimeFilter++;
+                    }
+                  }
+                } catch (dirError) {
+                  if (isochronePolygon) {
+                    place.driveTime = undefined;
+                    place.distance = undefined;
+                    allPlaces.push(place);
+                  }
+                }
+                continue; // Skip school processing for colleges
+              }
+              
+              // Check if place is a school by types or name
               const isSchool = 
                 placeTypes.some((type: string) => 
                   type.includes('school') || 
@@ -949,9 +1035,53 @@ export async function POST(request: NextRequest) {
           try {
             const place = convertGooglePlace(googlePlace, firstSport);
             
-            // MVP: Detect schools in fallback results and assign entityType
+            // MVP: Detect colleges and schools in fallback results and assign entityType
             const placeName = (place.name || '').toLowerCase();
             const placeTypes = googlePlace.types || [];
+            
+            // Check for college first
+            const isCollege = 
+              placeTypes.some((type: string) => 
+                type.includes('university') || 
+                type.includes('college')
+              ) ||
+              placeName.includes('university') ||
+              placeName.includes('college') ||
+              placeName.includes('community college') ||
+              (placeName.includes('university of') && !placeName.includes('high school'));
+            
+            if (isCollege) {
+              place.isSchool = true;
+              place.entityType = 'College';
+              
+              // Sports detection for colleges
+              if (sport) {
+                const sportLower = sport.toLowerCase();
+                const nameContainsSport = placeName.includes(sportLower);
+                
+                if (!place.sports) {
+                  place.sports = [];
+                }
+                if (!place.sportsConfidence) {
+                  place.sportsConfidence = {};
+                }
+                
+                if (!place.sports.includes(sportLower)) {
+                  place.sports.push(sportLower);
+                }
+                place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.7;
+              }
+              
+              const initialScore = getClubConfidence(place);
+              place.clubScore = initialScore + 15;
+              place.isClub = true;
+              
+              const ageGroups = getAgeGroupScores(place);
+              ageGroups.elite += 5;
+              place.ageGroups = ageGroups;
+              place.primaryAgeGroup = getPrimaryAgeGroup(ageGroups);
+            }
+            
             const isSchool = 
               placeTypes.some((type: string) => 
                 type.includes('school') || 
@@ -964,7 +1094,8 @@ export async function POST(request: NextRequest) {
               placeName.includes('middle school') ||
               placeName.includes('elementary');
             
-            if (isSchool) {
+            // Only process as school if not already detected as college
+            if (isSchool && !isCollege) {
               place.isSchool = true;
               let detectedSchoolTypes: string[] = [];
               if (placeName.includes('private') || placeTypes.some(t => t.includes('private'))) {
@@ -1183,9 +1314,53 @@ export async function POST(request: NextRequest) {
             try {
               const place = convertGooglePlace(googlePlace, firstSport);
               
-              // MVP: Detect schools in fallback results and assign entityType
+              // MVP: Detect colleges and schools in fallback results and assign entityType
               const placeName = (place.name || '').toLowerCase();
               const placeTypes = googlePlace.types || [];
+              
+              // Check for college first
+              const isCollege = 
+                placeTypes.some((type: string) => 
+                  type.includes('university') || 
+                  type.includes('college')
+                ) ||
+                placeName.includes('university') ||
+                placeName.includes('college') ||
+                placeName.includes('community college') ||
+                (placeName.includes('university of') && !placeName.includes('high school'));
+              
+              if (isCollege) {
+                place.isSchool = true;
+                place.entityType = 'College';
+                
+                // Sports detection for colleges
+                if (firstSport) {
+                  const sportLower = firstSport.toLowerCase();
+                  const nameContainsSport = placeName.includes(sportLower);
+                  
+                  if (!place.sports) {
+                    place.sports = [];
+                  }
+                  if (!place.sportsConfidence) {
+                    place.sportsConfidence = {};
+                  }
+                  
+                  if (!place.sports.includes(sportLower)) {
+                    place.sports.push(sportLower);
+                  }
+                  place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.7;
+                }
+                
+                const initialScore = getClubConfidence(place);
+                place.clubScore = initialScore + 15;
+                place.isClub = true;
+                
+                const ageGroups = getAgeGroupScores(place);
+                ageGroups.elite += 5;
+                place.ageGroups = ageGroups;
+                place.primaryAgeGroup = getPrimaryAgeGroup(ageGroups);
+              }
+              
               const isSchool = 
                 placeTypes.some((type: string) => 
                   type.includes('school') || 
@@ -1198,7 +1373,8 @@ export async function POST(request: NextRequest) {
                 placeName.includes('middle school') ||
                 placeName.includes('elementary');
               
-              if (isSchool) {
+              // Only process as school if not already detected as college
+              if (isSchool && !isCollege) {
                 place.isSchool = true;
                 let detectedSchoolTypes: string[] = [];
                 if (placeName.includes('private') || placeTypes.some(t => t.includes('private'))) {
@@ -1224,8 +1400,8 @@ export async function POST(request: NextRequest) {
                 } else {
                   place.entityType = 'Public School';
                 }
-              } else {
-                // Not a school, assign as Club
+              } else if (!isCollege) {
+                // Not a school or college, assign as Club
                 place.entityType = 'Club';
               }
               

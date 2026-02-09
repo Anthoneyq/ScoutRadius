@@ -3,7 +3,7 @@
  * Handles place search and details fetching
  */
 
-export type EntityType = 'Public School' | 'Private School' | 'Club';
+export type EntityType = 'Public School' | 'Private School' | 'Club' | 'College';
 
 export interface Place {
   place_id: string;
@@ -22,7 +22,7 @@ export interface Place {
   distance?: number;
   types?: string[]; // Place types from Google Places API
   // MVP: Explicit entity type (hard-coded, not inferred at runtime)
-  entityType: EntityType; // REQUIRED: One of 'Public School', 'Private School', or 'Club'
+  entityType: EntityType; // REQUIRED: One of 'Public School', 'Private School', 'Club', or 'College'
   clubScore?: number; // Club confidence score (0-10+)
   isClub?: boolean; // True if clubScore >= 3 (legacy, use entityType instead)
   isSchool?: boolean; // True if place is a school (legacy, use entityType instead)

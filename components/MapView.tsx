@@ -14,6 +14,7 @@ interface Place {
   distance?: number;
   clubScore?: number;
   isClub?: boolean;
+  entityType?: 'Public School' | 'Private School' | 'Club' | 'College';
 }
 
 interface MapViewProps {
@@ -267,27 +268,47 @@ export default function MapView(props: MapViewProps) {
           // Just ensure the lngLat is set correctly - Mapbox will handle the rest
         }
         
-        // Update marker appearance for selection and confidence
+        // Update marker appearance for selection and entity type
         const el = existingMarker.getElement();
         if (el) {
-          const clubScore = place.clubScore ?? 0;
-          let markerColor: string;
+          // Color based on entity type
+          let markerColor = '#10b981'; // Default teal
           let markerSize: number;
           const markerOpacity = '1'; // Always full opacity
           
-          // Luxury confidence tier colors - BRIGHTER for visibility
-          if (clubScore >= 80) {
-            markerColor = '#fbbf24'; // Gold - Elite
-            markerSize = isSelected ? 22 : 16;
-          } else if (clubScore >= 60) {
-            markerColor = '#10b981'; // Emerald - Premium
+          if (place.entityType === 'Club' || (place.clubScore && place.clubScore >= 3)) {
+            markerColor = '#10b981'; // Teal for clubs
             markerSize = isSelected ? 20 : 14;
-          } else if (clubScore >= 40) {
-            markerColor = '#94a3b8'; // Brighter slate - Standard (was #64748b)
-            markerSize = isSelected ? 18 : 12;
+          } else if (place.entityType === 'Private School') {
+            markerColor = '#8b5cf6'; // Purple for private schools
+            markerSize = isSelected ? 20 : 14;
+          } else if (place.entityType === 'Public School') {
+            markerColor = '#3b82f6'; // Blue for public schools
+            markerSize = isSelected ? 20 : 14;
+          } else if (place.entityType === 'College') {
+            markerColor = '#06b6d4'; // Cyan for colleges
+            markerSize = isSelected ? 20 : 14;
           } else {
-            markerColor = '#64748b'; // Brighter slate - Basic (was #475569, was opacity 0.6)
-            markerSize = isSelected ? 16 : 10;
+            // Fallback to clubScore-based colors if entityType not set
+            const clubScore = place.clubScore ?? 0;
+            if (clubScore >= 80) {
+              markerColor = '#fbbf24'; // Gold - Elite
+              markerSize = isSelected ? 22 : 16;
+            } else if (clubScore >= 60) {
+              markerColor = '#10b981'; // Emerald - Premium
+              markerSize = isSelected ? 20 : 14;
+            } else if (clubScore >= 40) {
+              markerColor = '#94a3b8'; // Brighter slate - Standard
+              markerSize = isSelected ? 18 : 12;
+            } else {
+              markerColor = '#64748b'; // Brighter slate - Basic
+              markerSize = isSelected ? 16 : 10;
+            }
+          }
+          
+          // Selected state: use amber/gold
+          if (isSelected) {
+            markerColor = '#fbbf24'; // Amber gold
           }
           
           // Convert nested structure to simple if needed (for old markers)
@@ -315,33 +336,61 @@ export default function MapView(props: MapViewProps) {
           el.style.height = `${markerSize}px`;
           el.style.backgroundColor = markerColor;
           el.style.opacity = markerOpacity;
-          el.style.border = isSelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)';
-          el.style.boxShadow = isSelected 
-            ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
-            : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)';
+          el.style.border = isSelected ? '2px solid rgba(255,255,255,0.9)' : '2px solid rgba(255,255,255,0.9)';
+          
+          // Selected state: use amber/gold shadow
+          if (isSelected) {
+            el.style.boxShadow = '0 0 0 4px rgba(251, 191, 36, 0.3), 0 4px 16px rgba(251, 191, 36, 0.4)';
+          } else {
+            // Use entity type color for shadow
+            const rgb = markerColor === '#10b981' ? '16, 185, 129' : 
+                       markerColor === '#8b5cf6' ? '139, 92, 246' :
+                       markerColor === '#3b82f6' ? '59, 130, 246' :
+                       markerColor === '#06b6d4' ? '6, 182, 212' : '255, 255, 255';
+            el.style.boxShadow = `0 0 0 3px rgba(${rgb}, 0.33), 0 2px 8px rgba(0,0,0,0.4)`;
+          }
           el.style.zIndex = isSelected ? '1000' : '10';
         }
       } else {
         // Create new marker - flat, minimal circles (Pergamum-style)
-        const clubScore = place.clubScore ?? 0;
-        let markerColor: string;
+        // Color based on entity type
+        let markerColor = '#10b981'; // Default teal
         let markerSize: number;
         let markerOpacity = '1';
         
-        // Luxury confidence tier colors - BRIGHTER for visibility
-        if (clubScore >= 80) {
-          markerColor = '#fbbf24'; // Gold - Elite
-          markerSize = isSelected ? 22 : 16;
-        } else if (clubScore >= 60) {
-          markerColor = '#10b981'; // Emerald - Premium
+        if (place.entityType === 'Club' || (place.clubScore && place.clubScore >= 3)) {
+          markerColor = '#10b981'; // Teal for clubs
           markerSize = isSelected ? 20 : 14;
-        } else if (clubScore >= 40) {
-          markerColor = '#94a3b8'; // Brighter slate - Standard (was #64748b)
-          markerSize = isSelected ? 18 : 12;
+        } else if (place.entityType === 'Private School') {
+          markerColor = '#8b5cf6'; // Purple for private schools
+          markerSize = isSelected ? 20 : 14;
+        } else if (place.entityType === 'Public School') {
+          markerColor = '#3b82f6'; // Blue for public schools
+          markerSize = isSelected ? 20 : 14;
+        } else if (place.entityType === 'College') {
+          markerColor = '#06b6d4'; // Cyan for colleges
+          markerSize = isSelected ? 20 : 14;
         } else {
-          markerColor = '#64748b'; // Brighter slate - Basic (was #475569, was opacity 0.6)
-          markerSize = isSelected ? 16 : 10;
-          markerOpacity = '1'; // Full opacity - no dimming
+          // Fallback to clubScore-based colors if entityType not set
+          const clubScore = place.clubScore ?? 0;
+          if (clubScore >= 80) {
+            markerColor = '#fbbf24'; // Gold - Elite
+            markerSize = isSelected ? 22 : 16;
+          } else if (clubScore >= 60) {
+            markerColor = '#10b981'; // Emerald - Premium
+            markerSize = isSelected ? 20 : 14;
+          } else if (clubScore >= 40) {
+            markerColor = '#94a3b8'; // Brighter slate - Standard
+            markerSize = isSelected ? 18 : 12;
+          } else {
+            markerColor = '#64748b'; // Brighter slate - Basic
+            markerSize = isSelected ? 16 : 10;
+          }
+        }
+        
+        // Selected state: use amber/gold
+        if (isSelected) {
+          markerColor = '#fbbf24'; // Amber gold
         }
         
         // Create marker element - simple single element, no nested structure
@@ -352,10 +401,18 @@ export default function MapView(props: MapViewProps) {
         el.style.borderRadius = '50%';
         el.style.backgroundColor = markerColor;
         el.style.opacity = markerOpacity;
-        el.style.border = isSelected ? '2px solid #fbbf24' : '2px solid rgba(255,255,255,0.4)';
-        el.style.boxShadow = isSelected 
-          ? '0 0 0 3px rgba(251, 191, 36, 0.25), 0 4px 12px rgba(0,0,0,0.6), 0 0 24px rgba(251, 191, 36, 0.15)' 
-          : '0 0 0 1px rgba(255,255,255,0.3), 0 2px 8px rgba(0,0,0,0.6)';
+        el.style.border = '2px solid rgba(255,255,255,0.9)';
+        
+        // Selected state: use amber/gold shadow
+        if (isSelected) {
+          el.style.boxShadow = '0 0 0 4px rgba(251, 191, 36, 0.3), 0 4px 16px rgba(251, 191, 36, 0.4)';
+        } else {
+          // Use entity type color for shadow
+          const rgb = markerColor === '#10b981' ? '16, 185, 129' : 
+                     markerColor === '#8b5cf6' ? '139, 92, 246' :
+                     markerColor === '#3b82f6' ? '59, 130, 246' : '255, 255, 255';
+          el.style.boxShadow = `0 0 0 3px rgba(${rgb}, 0.33), 0 2px 8px rgba(0,0,0,0.4)`;
+        }
         el.style.transition = 'opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), border-color 300ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)'; // Only transition visual properties, NOT transform
         el.style.cursor = 'pointer';
         el.style.pointerEvents = 'auto';

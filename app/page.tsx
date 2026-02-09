@@ -113,6 +113,26 @@ export default function Home() {
 
   const [currentSports, setCurrentSports] = useState<string[]>([]);
   const [currentSchoolTypes, setCurrentSchoolTypes] = useState<string[]>([]);
+  
+  // Left sidebar filter state (Pergamum-style)
+  const [entityFilters, setEntityFilters] = useState<string[]>([]);
+  const [sportFilters, setSportFilters] = useState<string[]>([]);
+  
+  const toggleEntityFilter = (filter: string) => {
+    setEntityFilters(prev => 
+      prev.includes(filter) 
+        ? prev.filter(f => f !== filter)
+        : [...prev, filter]
+    );
+  };
+  
+  const toggleSportFilter = (filter: string) => {
+    setSportFilters(prev => 
+      prev.includes(filter) 
+        ? prev.filter(f => f !== filter)
+        : [...prev, filter]
+    );
+  };
 
   // Consolidated mobile sheet transition helpers (prevents desync)
   const goToResultsView = useCallback(() => {
@@ -133,6 +153,10 @@ export default function Home() {
     sports: string[],
     schoolTypes?: string[]
   ) => {
+    // Use sidebar filters if set, otherwise use Controls filters
+    const finalSports = sportFilters.length > 0 ? sportFilters : sports;
+    const finalSchoolTypes = entityFilters.length > 0 ? entityFilters : schoolTypes;
+    
     // Reset stage to idle when new search begins (only place we reset to idle)
     setAnalysisStage("idle");
     setIsLoading(true);
@@ -142,12 +166,12 @@ export default function Home() {
     
     // Store search parameters for the analyzing overlay and ResultsTable
     setCurrentSearchParams({
-      sports,
-      schoolTypes,
+      sports: finalSports,
+      schoolTypes: finalSchoolTypes,
       location: locationInput,
     });
-    setCurrentSports(sports);
-    setCurrentSchoolTypes(schoolTypes || []);
+    setCurrentSports(finalSports);
+    setCurrentSchoolTypes(finalSchoolTypes || []);
 
     try {
       // Stage 1: Generate isochrone
@@ -171,10 +195,10 @@ export default function Home() {
         },
         body: JSON.stringify({
           origin: searchOrigin,
-          sports,
+          sports: finalSports,
           driveTimeMinutes: driveTime,
           isochroneGeoJSON: isochroneData, // Pass the fetched isochrone for polygon filtering
-          schoolTypes: schoolTypes || [],
+          schoolTypes: finalSchoolTypes || [],
         }),
       });
 
@@ -367,6 +391,7 @@ export default function Home() {
     const mixedRecreationalPercent = totalEntities > 0 ? Math.round((mixedRecreational / totalEntities) * 100) : 100;
     const privateSchools = places.filter(p => p.entityType === 'Private School').length;
     const publicSchools = places.filter(p => p.entityType === 'Public School').length;
+    const colleges = places.filter(p => p.entityType === 'College').length;
     
     return {
       totalEntities,
@@ -377,10 +402,11 @@ export default function Home() {
       mixedRecreationalPercent,
       privateSchools,
       publicSchools,
+      colleges,
     };
   }, [places]);
   
-  const { totalEntities, clubs, avgDriveTime, avgDistance, youthFocusedPercent, mixedRecreationalPercent, privateSchools, publicSchools } = stats;
+  const { totalEntities, clubs, avgDriveTime, avgDistance, youthFocusedPercent, mixedRecreationalPercent, privateSchools, publicSchools, colleges } = stats;
 
 
   // Touch handlers and transforms now handled by BottomSheet component
@@ -396,6 +422,94 @@ export default function Home() {
           selectedPlaceId={selectedPlaceId}
           onPlaceClick={handlePlaceClick}
         />
+      </div>
+
+      {/* LEFT SIDEBAR - Pergamum style with luxury colors (desktop only) */}
+      <div className="hidden lg:block absolute left-6 top-32 bottom-6 z-20 w-64 pointer-events-none">
+        <div className="h-full overflow-y-auto pointer-events-auto space-y-4">
+          {/* Entity Type Categories */}
+          <div className="card-luxury rounded-lg p-4">
+            <h3 className="text-xs font-light text-label text-tertiary uppercase tracking-wider mb-3">
+              Entity Type
+            </h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => toggleEntityFilter('club')}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
+                  ${entityFilters.includes('club')
+                    ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-500/50 text-amber-300'
+                    : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                  }`}
+              >
+                <span className="text-lg">🏐</span>
+                <span>Clubs</span>
+                {entityFilters.includes('club') && <span className="ml-auto text-amber-400">✓</span>}
+              </button>
+              
+              <button
+                onClick={() => toggleEntityFilter('public')}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
+                  ${entityFilters.includes('public')
+                    ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 border border-emerald-500/50 text-emerald-300'
+                    : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                  }`}
+              >
+                <span className="text-lg">🏫</span>
+                <span>Public Schools</span>
+                {entityFilters.includes('public') && <span className="ml-auto text-emerald-400">✓</span>}
+              </button>
+              
+              <button
+                onClick={() => toggleEntityFilter('private')}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
+                  ${entityFilters.includes('private')
+                    ? 'bg-gradient-to-r from-violet-500/20 to-violet-600/20 border border-violet-500/50 text-violet-300'
+                    : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                  }`}
+              >
+                <span className="text-lg">🎓</span>
+                <span>Private Schools</span>
+                {entityFilters.includes('private') && <span className="ml-auto text-violet-400">✓</span>}
+              </button>
+              
+              <button
+                onClick={() => toggleEntityFilter('college')}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
+                  ${entityFilters.includes('college')
+                    ? 'bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-500/50 text-blue-300'
+                    : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                  }`}
+              >
+                <span className="text-lg">🏛️</span>
+                <span>Colleges</span>
+                {entityFilters.includes('college') && <span className="ml-auto text-blue-400">✓</span>}
+              </button>
+            </div>
+          </div>
+          
+          {/* Sports Categories */}
+          <div className="card-luxury rounded-lg p-4">
+            <h3 className="text-xs font-light text-label text-tertiary uppercase tracking-wider mb-3">
+              Sports
+            </h3>
+            <div className="space-y-2">
+              {['volleyball', 'soccer', 'basketball', 'baseball', 'football'].map(sport => (
+                <button
+                  key={sport}
+                  onClick={() => toggleSportFilter(sport)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-left text-sm font-light
+                    ${sportFilters.includes(sport)
+                      ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-500/50 text-amber-300'
+                      : 'bg-slate-800/30 border border-slate-700/30 text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                    }`}
+                >
+                  <span className="capitalize">{sport}</span>
+                  {sportFilters.includes(sport) && <span className="ml-auto text-amber-400">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ANALYZING OVERLAY — shows when searching */}
@@ -594,6 +708,12 @@ export default function Home() {
             <div className="text-[10px] text-label text-tertiary mt-1">PUBLIC SCHOOLS</div>
           </div>
         </div>
+        <div className="pointer-events-auto">
+          <div className="card-luxury rounded-lg px-5 py-4">
+            <div className="text-2xl font-light text-numeric accent-gold">{colleges}</div>
+            <div className="text-[10px] text-label text-tertiary mt-1">COLLEGES</div>
+          </div>
+        </div>
       </div>
 
       {/* DESKTOP RIGHT RESULTS PANEL — visible on desktop (≥ 1024px) and tablet (768-1023px) */}
@@ -621,6 +741,96 @@ export default function Home() {
           />
         </div>
       </div>
+
+      {/* BOTTOM INFO CARD - Pergamum style (when place selected) */}
+      {selectedPlaceId && (() => {
+        const selectedPlace = places.find(p => p.place_id === selectedPlaceId);
+        return selectedPlace ? (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-2xl px-6">
+            <div className="card-luxury rounded-2xl p-6 shadow-2xl animate-slide-up">
+              <button
+                onClick={() => {
+                  setSelectedPlaceId(null);
+                }}
+                className="absolute top-4 right-4 w-8 h-8 bg-slate-800 hover:bg-red-500 rounded-full flex items-center justify-center transition-all"
+              >
+                <span className="text-white text-lg">×</span>
+              </button>
+              
+              <div className="flex gap-6">
+                <div className="flex-1">
+                  <h2 className="text-xl font-light text-primary mb-2">{selectedPlace.name}</h2>
+                  <p className="text-sm text-secondary mb-4">{selectedPlace.address}</p>
+                  
+                  <div className="flex gap-4 text-sm text-tertiary">
+                    {selectedPlace.driveTime && (
+                      <div className="flex items-center gap-2">
+                        <span>🚗</span>
+                        <span>{selectedPlace.driveTime} min</span>
+                      </div>
+                    )}
+                    {selectedPlace.distance && (
+                      <div className="flex items-center gap-2">
+                        <span>📍</span>
+                        <span>{selectedPlace.distance.toFixed(1)} mi</span>
+                      </div>
+                    )}
+                    {selectedPlace.rating && (
+                      <div className="flex items-center gap-2">
+                        <span>⭐</span>
+                        <span>{selectedPlace.rating}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {selectedPlace.sports && selectedPlace.sports.length > 0 && (
+                    <div className="mt-4">
+                      <div className="text-xs text-tertiary uppercase tracking-wide mb-2">Sports Offered</div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedPlace.sports.map(sport => (
+                          <span key={sport} className="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs rounded-full border border-amber-500/30">
+                            {sport}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  {selectedPlace.website && (
+                    <a
+                      href={selectedPlace.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm rounded-lg transition-all text-center whitespace-nowrap"
+                    >
+                      Visit Website
+                    </a>
+                  )}
+                  {selectedPlace.phone && (
+                    <a
+                      href={`tel:${selectedPlace.phone}`}
+                      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-all text-center"
+                    >
+                      Call
+                    </a>
+                  )}
+                  <button
+                    onClick={() => {
+                      const url = `https://www.google.com/maps/dir/?api=1&destination=${selectedPlace.location.lat},${selectedPlace.location.lng}`;
+                      window.open(url, '_blank');
+                    }}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-all"
+                  >
+                    Directions
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null;
+      })()}
     </div>
   );
 }
