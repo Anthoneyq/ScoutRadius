@@ -151,7 +151,7 @@ function filterResultsStrict(
   
   // MVP RULE 2: School filters exclude clubs
   if (filters.schoolTypes && filters.schoolTypes.length > 0) {
-    // If filtering for schools, exclude all clubs
+    // CRITICAL: If filtering for schools, exclude all clubs
     if (entity.entityType === 'Club') {
       return false;
     }
@@ -164,51 +164,112 @@ function filterResultsStrict(
     // Check specific school type filters
     const hasPublicFilter = filters.schoolTypes.includes('public');
     const hasPrivateFilter = filters.schoolTypes.includes('private');
+    const hasClubFilter = filters.schoolTypes.includes('club');
     
-    if (hasPublicFilter && entity.entityType !== 'Public School') return false;
-    if (hasPrivateFilter && entity.entityType !== 'Private School') return false;
-    
-    // If only public/private filters (no school level filters), allow through
-    const hasOnlyEntityFilters = (hasPublicFilter || hasPrivateFilter) && 
-      !filters.schoolTypes.some(id => ['elementary', 'middle', 'juniorHigh', 'highSchool'].includes(id));
-    
-    if (hasOnlyEntityFilters) {
-      // Just public/private filter, no school level filter
-      // CONDITIONAL SPORT FILTER (relaxed) - applies after entity type filter
-      if (filters.sports && filters.sports.length > 0) {
-        const selectedSport = filters.sports[0].toLowerCase();
-        if (!entity.sports || entity.sports.length === 0) return false;
-        const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
-        if (!hasSport) return false;
-        const confidence = entity.sportsConfidence?.[selectedSport];
-        // Accept 70%+ confidence instead of requiring 100% (more forgiving)
-        if (confidence === undefined || confidence < 0.7) return false;
-      }
-      return true;
+    // If club filter is selected, exclude schools (handled by RULE 1 above)
+    if (hasClubFilter) {
+      return false; // Shouldn't reach here due to RULE 1, but safety check
     }
     
-    // Check school level filters (elementary, middle, etc.)
+    // CRITICAL FIX: When user selects school filters, show ALL matching schools
+    // Don't require exact match on school level unless ONLY level filters are specified
+    
+    // If public filter is selected, show ALL public schools
+    if (hasPublicFilter && entity.entityType === 'Public School') {
+      // Check level filters if specified (but don't block if no match)
+      const schoolLevelFilters = filters.schoolTypes.filter(id => 
+        ['elementary', 'middle', 'juniorHigh', 'highSchool'].includes(id)
+      );
+      
+      if (schoolLevelFilters.length > 0) {
+        // Level filters specified - prefer matches but don't block
+        if (entity.schoolTypes && entity.schoolTypes.length > 0) {
+          const matchesLevel = entity.schoolTypes.some(type => schoolLevelFilters.includes(type));
+          // Even if doesn't match level, still allow (user selected "public" - show all public schools)
+        }
+      }
+      
+      // CRITICAL: When school type is primary filter, sport filter is OPTIONAL
+      // Don't block schools if sport data is missing or incomplete
+      // Schools might have sports even if not detected in name
+      if (filters.sports && filters.sports.length > 0) {
+        const selectedSport = filters.sports[0].toLowerCase();
+        if (entity.sports && entity.sports.length > 0) {
+          const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
+          if (hasSport) {
+            const confidence = entity.sportsConfidence?.[selectedSport];
+            // Only filter out if confidence is explicitly very low (< 0.3)
+            // This allows schools with 0.5 confidence (default for schools without sport in name)
+            if (confidence !== undefined && confidence < 0.3) return false;
+          }
+          // If school doesn't have this sport in list, still allow through
+          // Sport data might be incomplete - don't block schools
+        }
+        // If school has no sports data, allow through (school might have sport)
+      }
+      
+      return true; // Public school matches public filter
+    }
+    
+    // If private filter is selected, show ALL private schools
+    if (hasPrivateFilter && entity.entityType === 'Private School') {
+      const schoolLevelFilters = filters.schoolTypes.filter(id => 
+        ['elementary', 'middle', 'juniorHigh', 'highSchool'].includes(id)
+      );
+      
+      if (schoolLevelFilters.length > 0) {
+        if (entity.schoolTypes && entity.schoolTypes.length > 0) {
+          const matchesLevel = entity.schoolTypes.some(type => schoolLevelFilters.includes(type));
+          // Allow through even if level doesn't match (user selected "private" - show all private)
+        }
+      }
+      
+      // CRITICAL: When school type is primary filter, sport filter is OPTIONAL
+      if (filters.sports && filters.sports.length > 0) {
+        const selectedSport = filters.sports[0].toLowerCase();
+        if (entity.sports && entity.sports.length > 0) {
+          const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
+          if (hasSport) {
+            const confidence = entity.sportsConfidence?.[selectedSport];
+            // Only filter out if confidence is explicitly very low (< 0.3)
+            if (confidence !== undefined && confidence < 0.3) return false;
+          }
+        }
+      }
+      
+      return true; // Private school matches private filter
+    }
+    
+    // If only school level filters (no public/private), show schools matching level
     const schoolLevelFilters = filters.schoolTypes.filter(id => 
       ['elementary', 'middle', 'juniorHigh', 'highSchool'].includes(id)
     );
     
-    if (schoolLevelFilters.length > 0) {
-      if (!entity.schoolTypes || entity.schoolTypes.length === 0) return false;
-      const matchesLevel = entity.schoolTypes.some(type => schoolLevelFilters.includes(type));
-      if (!matchesLevel) return false;
+    if (schoolLevelFilters.length > 0 && !hasPublicFilter && !hasPrivateFilter) {
+      // Only level filters, no public/private filter
+      if (entity.schoolTypes && entity.schoolTypes.length > 0) {
+        const matchesLevel = entity.schoolTypes.some(type => schoolLevelFilters.includes(type));
+        if (matchesLevel) {
+          // Matches level - check sport filter if specified
+          if (filters.sports && filters.sports.length > 0) {
+            const selectedSport = filters.sports[0].toLowerCase();
+            if (entity.sports && entity.sports.length > 0) {
+              const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
+              if (hasSport) {
+                const confidence = entity.sportsConfidence?.[selectedSport];
+                if (confidence !== undefined && confidence < 0.7) return false;
+              }
+            }
+          }
+          return true;
+        }
+      }
+      // If no level detected, still allow through (be lenient)
+      return true;
     }
     
-    // CONDITIONAL SPORT FILTER (relaxed) - applies after entity type filter
-    if (filters.sports && filters.sports.length > 0) {
-      const selectedSport = filters.sports[0].toLowerCase();
-      if (!entity.sports || entity.sports.length === 0) return false;
-      const hasSport = entity.sports.some(s => s.toLowerCase() === selectedSport);
-      if (!hasSport) return false;
-      const confidence = entity.sportsConfidence?.[selectedSport];
-      // Accept 70%+ confidence instead of requiring 100% (more forgiving)
-      if (confidence === undefined || confidence < 0.7) return false;
-    }
-    
+    // If we reach here, user selected school filters but no match
+    // This shouldn't happen, but be lenient - if it's a school, allow it
     return true;
   }
   
@@ -724,12 +785,20 @@ export async function POST(request: NextRequest) {
               
               // Detect school type from name/types
               let detectedSchoolTypes: string[] = [];
-              if (placeName.includes('private') || placeTypes.some(t => t.includes('private'))) {
+              
+              // CRITICAL: Check for private FIRST (more specific)
+              const isPrivate = placeName.includes('private') || 
+                               placeTypes.some(t => t.includes('private')) ||
+                               placeName.includes('academy') && !placeName.includes('public');
+              
+              if (isPrivate) {
                 detectedSchoolTypes.push('private');
-              }
-              if (placeName.includes('public') || placeTypes.some(t => t.includes('public'))) {
+              } else {
+                // If not explicitly private, assume public (most schools are public)
                 detectedSchoolTypes.push('public');
               }
+              
+              // Add level types
               if (placeName.includes('elementary') || placeName.includes('primary') || placeName.includes('grade school')) {
                 detectedSchoolTypes.push('elementary');
               }
@@ -743,16 +812,9 @@ export async function POST(request: NextRequest) {
                 detectedSchoolTypes.push('highSchool');
               }
               
-              // Filter by selected school types - must match at least one
-              if (detectedSchoolTypes.length > 0) {
-                const matchesSelectedType = detectedSchoolTypes.some(detected => schoolTypes.includes(detected));
-                if (!matchesSelectedType) continue; // Skip if doesn't match any selected type
-              } else {
-                // If we can't detect type, include it if searching for generic school terms
-                // This handles cases where school type isn't clear from name
-                if (!schoolKeywords.some(k => placeName.includes(k.split(' ')[0]))) {
-                  continue; // Skip if name doesn't match any keyword
-                }
+              // If no level detected, default to highSchool (most common)
+              if (!detectedSchoolTypes.some(t => ['elementary', 'middle', 'juniorHigh', 'highSchool'].includes(t))) {
+                detectedSchoolTypes.push('highSchool');
               }
               
               // Use first sport or "school" as sport label
@@ -761,22 +823,19 @@ export async function POST(request: NextRequest) {
               
               // Mark as school and store detected types
               place.isSchool = true;
-              place.schoolTypes = detectedSchoolTypes.length > 0 ? detectedSchoolTypes : ['unknown'];
+              place.schoolTypes = detectedSchoolTypes;
               
               // MVP: Assign explicit entityType (hard-coded, not inferred)
               if (detectedSchoolTypes.includes('private')) {
                 place.entityType = 'Private School';
-              } else if (detectedSchoolTypes.includes('public')) {
-                place.entityType = 'Public School';
               } else {
-                // Default to Public School if unclear (most schools are public)
+                // Default to Public School (most schools are public)
                 place.entityType = 'Public School';
               }
               
-              // STRICT SPORTS DETECTION FOR SCHOOLS
-              // Only set confidence to 1.0 if sport is explicitly confirmed
-              // For schools found via school search, we don't have sport context
-              // So set confidence to 0.0 (will be filtered out if sport filter is active)
+              // SPORTS DETECTION FOR SCHOOLS (lenient - don't block schools)
+              // Schools might have sports even if not in name
+              // Set confidence based on name match, but don't use 0.0 (which would block)
               if (sports && sports.length > 0) {
                 if (!place.sports) {
                   place.sports = [];
@@ -795,8 +854,9 @@ export async function POST(request: NextRequest) {
                     place.sports.push(sportLower);
                   }
                   
-                  // Only set to 1.0 if explicitly confirmed (name contains sport)
-                  place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.0;
+                  // Set confidence: 1.0 if name contains sport, 0.5 if not (lenient - don't block)
+                  // This allows schools through even if sport isn't in name
+                  place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.5;
                 }
               }
               
@@ -1050,7 +1110,15 @@ export async function POST(request: NextRequest) {
       });
     });
     
-    console.log(`[Strict Filter] Before: ${uniquePlaces.length}, After: ${filteredPlaces.length}, School types: ${schoolTypes.join(', ') || 'none'}, Sports: ${sports.join(', ') || 'none'}`);
+    // Log filtering results for debugging
+    const schoolsBefore = uniquePlaces.filter(p => p.entityType === 'Public School' || p.entityType === 'Private School').length;
+    const schoolsAfter = filteredPlaces.filter(p => p.entityType === 'Public School' || p.entityType === 'Private School').length;
+    console.log(`[Strict Filter] Before: ${uniquePlaces.length} total (${schoolsBefore} schools), After: ${filteredPlaces.length} total (${schoolsAfter} schools), School types: ${schoolTypes.join(', ') || 'none'}, Sports: ${sports.join(', ') || 'none'}`);
+    
+    // Debug: Log why schools might be filtered out
+    if (schoolTypes.length > 0 && schoolsBefore > 0 && schoolsAfter === 0) {
+      console.warn(`[Strict Filter] WARNING: ${schoolsBefore} schools found but all filtered out. Checking first school:`, uniquePlaces.find(p => p.entityType === 'Public School' || p.entityType === 'Private School'));
+    }
     
     // Log search pipeline results
     console.log(`Search pipeline: raw=${uniqueRawPlaces.length}, afterPolygon=${totalResultsAfterPolygonFilter}, afterDriveTime=${totalResultsAfterDriveTimeFilter}, retail excluded=${retailExcludedCount}, afterStrictFilter=${filteredPlaces.length}, final=${filteredPlaces.length}`);
