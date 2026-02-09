@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
+
 type AnalysisStage = 
   | "idle" 
   | "isochrone" 
@@ -28,11 +30,48 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
   const sports = searchParams?.sports || [];
   const schoolTypes = searchParams?.schoolTypes || [];
   const location = searchParams?.location || '';
+  const [progress, setProgress] = useState(0);
+  const progressRef = useRef(0);
 
   // Hide overlay when idle or complete
   if (analysisStage === "idle" || analysisStage === "complete") {
     return null;
   }
+
+  // Animate progress bar smoothly
+  useEffect(() => {
+    const currentIndex = STAGE_ORDER.indexOf(analysisStage);
+    const totalStages = STAGE_ORDER.length - 2; // Exclude idle and complete
+    
+    // Calculate base progress based on stage
+    const baseProgress = (currentIndex / totalStages) * 100;
+    
+    // Animate from current progress to target
+    const targetProgress = Math.min(baseProgress + 30, 95); // Don't go to 100% until complete
+    const duration = 2000; // 2 seconds per stage
+    const startTime = Date.now();
+    const startProgress = progressRef.current;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progressRatio = Math.min(elapsed / duration, 1);
+      
+      // Ease out animation
+      const eased = 1 - Math.pow(1 - progressRatio, 3);
+      const currentProgress = startProgress + (targetProgress - startProgress) * eased;
+      
+      progressRef.current = currentProgress;
+      setProgress(currentProgress);
+
+      if (progressRatio < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    const interval = setInterval(animate, 16); // ~60fps
+    
+    return () => clearInterval(interval);
+  }, [analysisStage]);
 
   // Format sport names for display
   const formatSportName = (sport: string) => {
@@ -86,8 +125,25 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
             <h2 className="text-xl font-light text-label text-primary tracking-wider">ANALYZING AREA</h2>
           </div>
           {location && (
-            <p className="text-sm text-tertiary font-light">{location}</p>
+            <p className="text-sm text-tertiary font-light mb-4">{location}</p>
           )}
+          
+          {/* Overall Progress Bar */}
+          <div className="mt-4 mb-2">
+            <div className="h-2 bg-[#334155]/30 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-[#fbbf24] via-[#10b981] to-[#fbbf24] rounded-full transition-all duration-300 ease-out"
+                style={{ 
+                  width: `${Math.min(progress, 95)}%`,
+                  backgroundSize: '200% 100%',
+                  animation: progress > 0 && progress < 95 ? 'shimmer 2s infinite' : 'none'
+                }}
+              ></div>
+            </div>
+            <div className="text-xs text-tertiary font-light mt-2">
+              {Math.round(progress)}% complete
+            </div>
+          </div>
         </div>
 
         {/* Analysis Steps */}
@@ -104,24 +160,24 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
               }`}></div>
               <div className="flex-1">
                 <div className="text-sm font-light text-label text-secondary mb-1">Mapping reachable training area</div>
-                <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-[600ms] ease-out ${
-                      getBarState("isochrone") === 'active'
-                        ? 'bg-[#fbbf24]/40 animate-pulse'
-                        : getBarState("isochrone") === 'complete'
-                          ? 'bg-[#fbbf24]/60'
-                          : 'bg-transparent'
-                    }`}
-                    style={{ 
-                      width: getBarState("isochrone") === 'complete' 
-                        ? '100%' 
-                        : getBarState("isochrone") === 'active'
-                          ? '100%' // Animated indeterminate
-                          : '0%'
-                    }}
-                  ></div>
-                </div>
+                  <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-300 ease-out ${
+                        getBarState("isochrone") === 'active'
+                          ? 'bg-[#fbbf24]'
+                          : getBarState("isochrone") === 'complete'
+                            ? 'bg-[#fbbf24]'
+                            : 'bg-transparent'
+                      }`}
+                      style={{ 
+                        width: getBarState("isochrone") === 'complete' 
+                          ? '100%' 
+                          : getBarState("isochrone") === 'active'
+                            ? `${Math.min(progress, 33)}%`
+                            : '0%'
+                      }}
+                    ></div>
+                  </div>
               </div>
             </div>
           </div>
@@ -154,18 +210,18 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
                   </div>
                   <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full transition-all duration-[600ms] ease-out ${
+                      className={`h-full rounded-full transition-all duration-300 ease-out ${
                         getBarState("entityFetch") === 'active'
-                          ? 'bg-[#10b981]/40 animate-pulse'
+                          ? 'bg-[#10b981]'
                           : getBarState("entityFetch") === 'complete'
-                            ? 'bg-[#10b981]/60'
+                            ? 'bg-[#10b981]'
                             : 'bg-transparent'
                       }`}
                       style={{ 
                         width: getBarState("entityFetch") === 'complete' 
                           ? '100%' 
                           : getBarState("entityFetch") === 'active'
-                            ? '100%' // Animated indeterminate
+                            ? `${Math.min(Math.max(progress - 33, 0), 66)}%`
                             : '0%'
                       }}
                     ></div>
@@ -190,18 +246,18 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
                   <div className="text-sm font-light text-label text-secondary mb-1">Ranking best opportunities</div>
                   <div className="h-1.5 bg-[#334155]/30 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full transition-all duration-[600ms] ease-out ${
+                      className={`h-full rounded-full transition-all duration-300 ease-out ${
                         getBarState("ranking") === 'active'
-                          ? 'bg-[#fbbf24]/40 animate-pulse'
+                          ? 'bg-[#fbbf24]'
                           : getBarState("ranking") === 'complete'
-                            ? 'bg-[#fbbf24]/60'
+                            ? 'bg-[#fbbf24]'
                             : 'bg-transparent'
                       }`}
                       style={{ 
                         width: getBarState("ranking") === 'complete' 
                           ? '100%' 
                           : getBarState("ranking") === 'active'
-                            ? '100%' // Animated indeterminate
+                            ? `${Math.min(Math.max(progress - 66, 0), 95)}%`
                             : '0%'
                       }}
                     ></div>
