@@ -154,12 +154,20 @@ function filterResultsStrict(
       if (entity.entityType === 'Public School') {
         passesEntityFilter = true;
       }
+      // CRITICAL: Explicitly exclude clubs when public filter is active
+      if (entity.entityType === 'Club') {
+        return false; // Clubs should never show when filtering for public schools
+      }
     }
     
     // Check for 'private' filter
     if (filters.schoolTypes!.includes('private')) {
       if (entity.entityType === 'Private School') {
         passesEntityFilter = true;
+      }
+      // CRITICAL: Explicitly exclude clubs when private filter is active
+      if (entity.entityType === 'Club') {
+        return false; // Clubs should never show when filtering for private schools
       }
     }
     
@@ -168,6 +176,18 @@ function filterResultsStrict(
       if (entity.entityType === 'College') {
         passesEntityFilter = true;
       }
+      // CRITICAL: Explicitly exclude clubs when college filter is active
+      if (entity.entityType === 'Club') {
+        return false; // Clubs should never show when filtering for colleges
+      }
+    }
+    
+    // CRITICAL: If filtering for schools (public/private/college), exclude clubs
+    const isFilteringForSchools = filters.schoolTypes!.some(id => 
+      ['public', 'private', 'college'].includes(id)
+    );
+    if (isFilteringForSchools && entity.entityType === 'Club') {
+      return false; // Never show clubs when filtering for schools
     }
     
     // Check for school level filters (elementary, middle, juniorHigh, highSchool)
@@ -1245,8 +1265,23 @@ export async function POST(request: NextRequest) {
     
     // Log filtering results for debugging
     const schoolsBefore = uniquePlaces.filter(p => p.entityType === 'Public School' || p.entityType === 'Private School').length;
+    const clubsBefore = uniquePlaces.filter(p => p.entityType === 'Club').length;
     const schoolsAfter = filteredPlaces.filter(p => p.entityType === 'Public School' || p.entityType === 'Private School').length;
-    console.log(`[Strict Filter] Before: ${uniquePlaces.length} total (${schoolsBefore} schools), After: ${filteredPlaces.length} total (${schoolsAfter} schools), School types: ${schoolTypes.join(', ') || 'none'}, Sports: ${sports.join(', ') || 'none'}`);
+    const clubsAfter = filteredPlaces.filter(p => p.entityType === 'Club').length;
+    console.log(`[Strict Filter] Before: ${uniquePlaces.length} total (${schoolsBefore} schools, ${clubsBefore} clubs), After: ${filteredPlaces.length} total (${schoolsAfter} schools, ${clubsAfter} clubs), School types filter: [${schoolTypes.join(', ') || 'none'}], Sports: [${sports.join(', ') || 'none'}]`);
+    
+    // Debug: Log entity type distribution
+    const entityTypeCounts = uniquePlaces.reduce((acc, p) => {
+      acc[p.entityType || 'undefined'] = (acc[p.entityType || 'undefined'] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log(`[Strict Filter] Entity type distribution before filtering:`, entityTypeCounts);
+    
+    const filteredEntityTypeCounts = filteredPlaces.reduce((acc, p) => {
+      acc[p.entityType || 'undefined'] = (acc[p.entityType || 'undefined'] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log(`[Strict Filter] Entity type distribution after filtering:`, filteredEntityTypeCounts);
     
     // Debug: Log why schools might be filtered out
     if (schoolTypes.length > 0 && schoolsBefore > 0 && schoolsAfter === 0) {
