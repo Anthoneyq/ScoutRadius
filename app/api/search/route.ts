@@ -1055,8 +1055,8 @@ export async function POST(request: NextRequest) {
               place.entityType = 'College';
               
               // Sports detection for colleges
-              if (sport) {
-                const sportLower = sport.toLowerCase();
+              if (firstSport) {
+                const sportLower = firstSport.toLowerCase();
                 const nameContainsSport = placeName.includes(sportLower);
                 
                 if (!place.sports) {
