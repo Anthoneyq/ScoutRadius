@@ -52,6 +52,8 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
     const startTime = Date.now();
     const startProgress = progressRef.current;
 
+    let animationFrameId: number;
+
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progressRatio = Math.min(elapsed / duration, 1);
@@ -64,13 +66,17 @@ export default function AnalyzingOverlay({ analysisStage, searchParams }: Analyz
       setProgress(currentProgress);
 
       if (progressRatio < 1) {
-        requestAnimationFrame(animate);
+        animationFrameId = requestAnimationFrame(animate);
       }
     };
 
-    const interval = setInterval(animate, 16); // ~60fps
+    animationFrameId = requestAnimationFrame(animate);
     
-    return () => clearInterval(interval);
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [analysisStage]);
 
   // Format sport names for display
