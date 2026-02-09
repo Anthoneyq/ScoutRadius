@@ -1054,11 +1054,8 @@ export async function POST(request: NextRequest) {
               place.isSchool = true;
               place.entityType = 'College';
               
-              // Sports detection for colleges
-              if (firstSport) {
-                const sportLower = firstSport.toLowerCase();
-                const nameContainsSport = placeName.includes(sportLower);
-                
+              // Sports detection for colleges - check all sports in the search
+              if (sports && sports.length > 0) {
                 if (!place.sports) {
                   place.sports = [];
                 }
@@ -1066,10 +1063,15 @@ export async function POST(request: NextRequest) {
                   place.sportsConfidence = {};
                 }
                 
-                if (!place.sports.includes(sportLower)) {
-                  place.sports.push(sportLower);
+                for (const sport of sports) {
+                  const sportLower = sport.toLowerCase();
+                  const nameContainsSport = placeName.includes(sportLower);
+                  
+                  if (!place.sports.includes(sportLower)) {
+                    place.sports.push(sportLower);
+                  }
+                  place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.7;
                 }
-                place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.7;
               }
               
               const initialScore = getClubConfidence(place);
@@ -1333,11 +1335,8 @@ export async function POST(request: NextRequest) {
                 place.isSchool = true;
                 place.entityType = 'College';
                 
-                // Sports detection for colleges
-                if (firstSport) {
-                  const sportLower = firstSport.toLowerCase();
-                  const nameContainsSport = placeName.includes(sportLower);
-                  
+                // Sports detection for colleges - check all sports in the search
+                if (sports && sports.length > 0) {
                   if (!place.sports) {
                     place.sports = [];
                   }
@@ -1345,10 +1344,15 @@ export async function POST(request: NextRequest) {
                     place.sportsConfidence = {};
                   }
                   
-                  if (!place.sports.includes(sportLower)) {
-                    place.sports.push(sportLower);
+                  for (const sport of sports) {
+                    const sportLower = sport.toLowerCase();
+                    const nameContainsSport = placeName.includes(sportLower);
+                    
+                    if (!place.sports.includes(sportLower)) {
+                      place.sports.push(sportLower);
+                    }
+                    place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.7;
                   }
-                  place.sportsConfidence[sportLower] = nameContainsSport ? 1.0 : 0.7;
                 }
                 
                 const initialScore = getClubConfidence(place);
